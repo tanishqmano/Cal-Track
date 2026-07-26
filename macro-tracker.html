@@ -628,16 +628,31 @@ function askForPass() {
       go.textContent = 'Checking…';
       passphrase = typed;
 
+      // A free host stops the instance when idle and takes the better part of a
+      // minute to start it again. Without saying so, that wait is indomitable
+      // from a rejected passphrase — same frozen button either way.
+      const waking = setTimeout(() => {
+        showGate('Waking the server. On the free plan this can take up to a minute.');
+      }, 3000);
+
+      // And it has to end somewhere, or the button stays stuck for good.
+      const stop = new AbortController();
+      const giveUp = setTimeout(() => stop.abort(), 90000);
+
       let accepted = false, note = 'That passphrase was not accepted.';
       try {
-        const res = await authFetch('/api/health', { cache: 'no-store' });
+        const res = await authFetch('/api/health', { cache: 'no-store', signal: stop.signal });
         if (res.status === 429) note = 'Too many tries. Wait a minute, then try again.';
         const info = res.ok ? await res.json() : null;
         accepted = Boolean(info && info.authed);
       } catch (e) {
-        note = 'Could not reach the server.';
+        note = stop.signal.aborted
+          ? 'The server did not answer in time. If it is a free host it may still be starting — try again in a moment.'
+          : 'Could not reach the server.';
       }
 
+      clearTimeout(waking);
+      clearTimeout(giveUp);
       go.disabled = false;
       go.textContent = 'Open';
 
