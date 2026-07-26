@@ -63,7 +63,22 @@ function loadEnv(file) {
 }
 
 const env = loadEnv(path.join(ROOT, '.env'));
-const pick = k => env[k] || process.env[k] || '';
+
+// Values pasted into a hosting dashboard often arrive wrapped in quotes or with
+// a stray space on the end, and an API key or passphrase that is wrong by one
+// invisible character fails in a way nobody can see. The .env parser already
+// unwraps quotes; do the same for real environment variables so both sources
+// behave alike.
+function clean(v) {
+  if (typeof v !== 'string') return '';
+  let s = v.trim();
+  if (s.length > 1 && ((s[0] === '"' && s.endsWith('"')) || (s[0] === "'" && s.endsWith("'")))) {
+    s = s.slice(1, -1).trim();
+  }
+  return s;
+}
+
+const pick = k => clean(env[k]) || clean(process.env[k]) || '';
 
 /* ---------- provider ---------- */
 
@@ -445,6 +460,10 @@ const server = http.createServer((req, res) => {
       authed: true,
       key: Boolean(API_KEY),
       sync: true,
+      // Named so a deployment can be checked from a browser. `file` on a hosted
+      // instance means MONGODB_URI never arrived, and the log will vanish on the
+      // next restart — worth being able to see without shell access.
+      store: store === mongoStore ? 'mongo' : 'file',
       provider: PROVIDER_NAME,
       format: P.format,
       model: P.model
