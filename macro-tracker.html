@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Macros</title>
+<style>
+  :root{
+    --bg:#f5f5f2; --surface:#ffffff; --surface-2:#fafaf8;
+    --text:#1b1c1a; --muted:#7a7a72; --faint:#a3a39a;
+    --border:#e5e4de; --accent:#2e6f52; --accent-soft:#e6f0ea;
+    --warn:#b4522f; --warn-soft:#fbeae3;
+    --radius:12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#141517; --surface:#1c1e21; --surface-2:#212429;
+      --text:#eceae6; --muted:#95958e; --faint:#6e6e68;
+      --border:#2d3036; --accent:#5fae86; --accent-soft:#1e3229;
+      --warn:#e08862; --warn-soft:#33221b;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-text-size-adjust:100%;
+    padding:14px 14px calc(28px + env(safe-area-inset-bottom));
+    max-width:660px; margin:0 auto;
+  }
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---- header ---- */
+  header{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  h1{font-size:18px;font-weight:640;letter-spacing:-.01em;margin:0;flex:1}
+  select,button,input,textarea{font:inherit;color:inherit}
+  .btn{
+    background:var(--surface);border:1px solid var(--border);color:var(--text);
+    border-radius:9px;padding:7px 11px;cursor:pointer;font-size:13.5px;line-height:1;
+  }
+  .btn:hover{background:var(--surface-2)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:560}
+  .btn.primary:disabled{opacity:.5;cursor:default;transform:none}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--muted);padding:5px 6px}
+  .btn.ghost:hover{background:var(--surface-2);color:var(--text)}
+  #daySel{
+    background:var(--surface);border:1px solid var(--border);border-radius:9px;
+    padding:7px 9px;font-size:13.5px;
+  }
+
+  .card{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:var(--radius);padding:14px;margin-bottom:12px;
+  }
+
+  /* ---- totals ---- */
+  .stat{margin-bottom:13px}
+  .stat:last-child{margin-bottom:0}
+  .stat-top{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+  .stat-name{font-size:13px;font-weight:560;flex:1}
+  .stat-val{font-size:13px}
+  .stat-val b{font-weight:620}
+  .stat-val span{color:var(--faint)}
+  .stat-left{font-size:12px;color:var(--muted);white-space:nowrap}
+  .stat-left.over{color:var(--warn);font-weight:560}
+  .bar{height:6px;background:var(--surface-2);border:1px solid var(--border);border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .18s ease}
+  .bar i.over{background:var(--warn)}
+
+  /* ---- micronutrient strip ---- */
+  /* 2x2 on a phone, one row once there is width for it */
+  .micros{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;
+    margin-top:14px;padding-top:13px;border-top:1px solid var(--border);
+  }
+  @media (min-width:520px){ .micros{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px} }
+  .ms-top{display:flex;align-items:baseline;gap:4px;margin-bottom:5px}
+  .ms-name{font-size:12px;font-weight:560;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .ms-top .num{font-size:12px;white-space:nowrap}
+  .ms-top b{font-weight:620}
+  .ms-t{color:var(--faint)}
+  .micros .bar i{background:var(--muted)}
+  .micros .bar i.done{background:var(--accent)}
+  @media (max-width:379px){
+    .ms-name{font-size:11.5px}
+    .micros{gap:10px}
+  }
+
+  /* ---- notes ---- */
+  .notes{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .note{
+    font-size:12px;padding:5px 9px;border-radius:99px;
+    background:var(--accent-soft);color:var(--accent);
+  }
+  .note.warn{background:var(--warn-soft);color:var(--warn)}
+
+  /* ---- input ---- */
+  textarea{
+    width:100%;resize:vertical;min-height:62px;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:9px;
+    padding:9px 10px;font-size:15px;
+  }
+  textarea:focus,input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .inputbar{display:flex;gap:8px;margin-top:9px;align-items:center}
+  .inputbar select{
+    background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:8px 9px;font-size:13.5px;
+  }
+  .inputbar .btn.primary{flex:1;padding:9px 12px}
+  .msg{margin-top:9px;font-size:12.5px;color:var(--warn);white-space:pre-wrap}
+  .msg.info{color:var(--muted)}
+
+  /* ---- items ---- */
+  .meal{margin-bottom:16px}
+  .meal:last-child{margin-bottom:0}
+  .meal-head{
+    display:flex;align-items:baseline;gap:2px 8px;flex-wrap:wrap;
+    padding-bottom:6px;margin-bottom:4px;border-bottom:1px solid var(--border);
+  }
+  .meal-name{font-size:12px;font-weight:640;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);flex:1}
+  /* nowrap so a long subtotal drops to its own line instead of squashing */
+  .meal-sub{font-size:12px;color:var(--faint);white-space:nowrap;margin-left:auto}
+
+  .colhead{display:none}
+  .row{
+    display:grid;grid-template-columns:1fr auto;gap:2px 10px;
+    padding:8px 0;border-bottom:1px solid var(--border);align-items:center;
+  }
+  .row:last-child{border-bottom:none}
+  .nm{grid-column:1;grid-row:1;font-size:14px;overflow-wrap:anywhere}
+  .nums{grid-column:1;grid-row:2;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+        gap:8px;font-size:12.5px;color:var(--muted);max-width:250px}
+  .n{text-align:left;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .n .lbl{color:var(--faint);margin-right:3px}
+  .micro{grid-column:1;grid-row:3;font-size:11.5px;color:var(--faint);white-space:nowrap}
+  .acts{grid-column:2;grid-row:1/-1;display:flex;gap:1px;align-self:center}
+
+  @media (min-width:520px){
+    .row{grid-template-columns:1fr 230px auto;gap:0 10px}
+    .nm{grid-row:1}
+    .nums{grid-column:2;grid-row:1;max-width:none;text-align:right}
+    .n{text-align:right}
+    .n .lbl{display:none}
+    .micro{grid-column:2;grid-row:2;text-align:right}
+    .acts{grid-column:3;grid-row:1/-1}
+    .colhead{
+      display:grid;grid-template-columns:1fr 230px auto;gap:0 10px;
+      font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);
+      padding-bottom:5px;
+    }
+    .colhead .nums{grid-column:2;grid-row:1;color:var(--faint)}
+    .colhead .spacer{grid-column:3;width:56px}
+  }
+
+  /* ---- edit form ---- */
+  .edit{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:2px 0}
+  .edit input[type=text]{flex:1 1 100%;min-width:0}
+  .edit input{
+    background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:7px 8px;font-size:13.5px;width:62px;
+  }
+  .edit input.num-in{width:58px;font-variant-numeric:tabular-nums}
+  .edit select{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:7px 8px;font-size:13.5px}
+  .edit .fld{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--faint)}
+
+  .empty{color:var(--faint);font-size:13.5px;text-align:center;padding:14px 0}
+
+  /* ---- chat ---- */
+  .transcript{
+    display:flex;flex-direction:column;gap:8px;
+    max-height:46vh;overflow-y:auto;margin-bottom:10px;
+    overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  }
+  .transcript:empty{display:none}
+  .bub{
+    max-width:88%;padding:8px 11px;border-radius:15px;font-size:14px;
+    white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.42;
+  }
+  .bub.you{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:5px}
+  .bub.ai{align-self:flex-start;background:var(--surface-2);border:1px solid var(--border);border-bottom-left-radius:5px}
+  .bub.did{
+    align-self:flex-start;background:var(--accent-soft);color:var(--accent);
+    border:none;font-size:12.5px;padding:5px 10px;border-radius:99px;
+  }
+  .bub ul{margin:5px 0 2px;padding-left:17px}
+  .bub li{margin:2px 0}
+  .bub strong{font-weight:650}
+  .typing{align-self:flex-start;color:var(--faint);font-size:13px;padding:4px 2px}
+  .hint{color:var(--faint);font-size:13px;text-align:center;padding:6px 0 10px}
+  .undobar{
+    display:flex;align-items:center;gap:8px;margin-bottom:8px;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
+    padding:6px 6px 6px 11px;font-size:12.5px;color:var(--muted);
+  }
+  .undobar span{flex:1}
+  .chat .inputbar{align-items:flex-end;margin-top:0}
+  #say{min-height:40px;max-height:130px;font-size:15px;padding:9px 11px;border-radius:11px}
+  .btn.send{
+    flex:none;width:40px;height:40px;padding:0;border-radius:50%;
+    font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;
+  }
+  .chat .inputbar .btn.primary{flex:none}
+
+  /* ---- footer ---- */
+  details{margin-top:4px}
+  summary{
+    cursor:pointer;font-size:13px;color:var(--muted);list-style:none;
+    padding:6px 0;user-select:none;
+  }
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"⚙ "}
+  .setrow{display:flex;gap:8px;margin-top:8px;align-items:center}
+  .setrow input{
+    flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:9px;padding:8px 10px;font-size:13.5px;
+  }
+  .fine{font-size:11.5px;color:var(--faint);margin-top:8px;line-height:1.5}
+  .danger{color:var(--warn);border-color:var(--warn)}
+
+  /* ---- passphrase gate ---- */
+  /* Covers the page rather than sitting in it: with no passphrase there is no
+     log to show, so a half-rendered empty tracker would only mislead. */
+  .gate{
+    position:fixed;inset:0;z-index:20;background:var(--bg);
+    display:flex;align-items:center;justify-content:center;
+    padding:24px calc(20px + env(safe-area-inset-right)) 24px calc(20px + env(safe-area-inset-left));
+  }
+  .gate-box{width:100%;max-width:330px}
+  .gate h2{font-size:17px;font-weight:640;margin:0 0 6px}
+  .gate p{font-size:13px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+  .gate input{
+    width:100%;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:9px;padding:10px 11px;font-size:16px; /* 16px: iOS zooms below it */
+  }
+  .gate .btn{width:100%;margin-top:9px;padding:10px;justify-content:center}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate" hidden>
+  <div class="gate-box">
+    <h2>Macros</h2>
+    <p id="gateNote">This tracker is private. Enter the passphrase to open it.</p>
+    <input type="password" id="gatePass" placeholder="Passphrase" autocomplete="current-password"
+           spellcheck="false" enterkeyhint="go">
+    <button class="btn primary" id="gateGo">Open</button>
+    <div class="msg" id="gateMsg" hidden></div>
+  </div>
+</div>
+
+<header>
+  <h1>Macros</h1>
+  <select id="daySel" aria-label="Day"></select>
+  <button class="btn" id="newDay">+ Day</button>
+</header>
+
+<div class="card" id="totals"></div>
+
+<div class="card" id="list"></div>
+
+<div class="card chat">
+  <div class="transcript" id="transcript" aria-live="polite"></div>
+  <div class="msg" id="msg" hidden></div>
+  <div class="undobar" id="undobar" hidden>
+    <span>Your log was changed.</span>
+    <button class="btn" id="undoBtn">Undo</button>
+  </div>
+  <div class="inputbar">
+    <textarea id="say" rows="1" placeholder="What did you eat? Or ask me anything."></textarea>
+    <button class="btn primary send" id="send" aria-label="Send">↑</button>
+  </div>
+</div>
+
+<details>
+  <summary>Settings</summary>
+  <div class="card">
+    <div class="setrow" id="keyRow">
+      <input type="password" id="key" placeholder="Anthropic API key (sk-ant-…)" autocomplete="off" spellcheck="false">
+      <button class="btn" id="saveKey">Save</button>
+    </div>
+    <div class="fine" id="keyNote" hidden></div>
+    <div class="fine">
+      Targets: 2150 kcal · 110 g protein · 65 g fat · 280 g carbs · 17 mg zinc · 19 mg iron · 440 mg magnesium · 80 mg vitamin C.
+      Protein counts only from complete sources (whey, milk, egg, chicken, mutton, fish, paneer, curd, yogurt).
+      Everything else is logged at 0 protein — calories, fat and carbs still count.
+      Micronutrients are the exception: they count from every food, plants included.
+      Targets are ICMR-NIN 2020 for an Indian adult man; the minerals sit above US RDAs because phytate in rice and dal blocks absorption.
+      Vitamin C is logged after cooking loss — a boiled or simmered vegetable keeps under half of what it started with, so sambar and kootu count for far less than the raw weight suggests.
+    </div>
+    <div class="setrow">
+      <button class="btn danger" id="reset">Reset all days</button>
+    </div>
+  </div>
+</details>
+
+<script>
+/* ============================================================
+   window.storage — persistent async key/value store.
+   Uses the host-provided window.storage when one exists,
+   otherwise installs an IndexedDB-backed implementation.
+   (No localStorage anywhere in this file.)
+   ============================================================ */
+(function () {
+  if (window.storage && typeof window.storage.getItem === 'function') return;
+
+  const DB = 'macro-tracker', STORE = 'kv';
+  let dbp = null;
+
+  function open() {
+    if (dbp) return dbp;
+    dbp = new Promise((res, rej) => {
+      const req = indexedDB.open(DB, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+    return dbp;
+  }
+
+  function tx(mode, fn) {
+    return open().then(db => new Promise((res, rej) => {
+      const t = db.transaction(STORE, mode);
+      const req = fn(t.objectStore(STORE));
+      t.onabort = t.onerror = () => rej(t.error);
+      t.oncomplete = () => res(req ? req.result : undefined);
+    }));
+  }
+
+  window.storage = {
+    getItem: k => tx('readonly', s => s.get(k)).then(v => (v === undefined ? null : v)),
+    setItem: (k, v) => tx('readwrite', s => s.put(v, k)).then(() => undefined),
+    removeItem: k => tx('readwrite', s => s.delete(k)).then(() => undefined)
+  };
+
+  // Ask the browser not to evict this data. iOS Safari clears script-writable
+  // storage for sites untouched for 7 days; granting persistence avoids losing
+  // a log after a week away. Silently ignored where unsupported.
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persisted()
+      .then(p => (p ? true : navigator.storage.persist()))
+      .catch(() => {});
+  }
+})();
+
+/* ============================================================
+   Config
+   ============================================================ */
+// Micronutrient targets are ICMR-NIN 2020 RDAs for an Indian adult man. The
+// minerals run higher than US RDAs (Zn 11, Fe 8, Mg 400) on purpose: a
+// rice/dal/millet diet is high in phytate, which blocks zinc and iron
+// absorption, so the intake needed to absorb enough is larger.
+// Adult woman: zn 13.2, fe 29, mg 370, vc 80.
+const TARGETS = { cal: 2150, p: 110, f: 65, c: 280, zn: 17, fe: 19, mg: 440, vc: 80 };
+const MICROS  = [
+  { k: 'zn', name: 'Zinc',      unit: 'mg' },
+  { k: 'fe', name: 'Iron',      unit: 'mg' },
+  { k: 'mg', name: 'Magnesium', unit: 'mg' },
+  { k: 'vc', name: 'Vitamin C', unit: 'mg' }
+];
+const MEALS   = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
+// Wire format. 'openai' covers NVIDIA NIM, OpenRouter, Together, vLLM and
+// OpenAI; 'anthropic' is the Claude Messages API. When served by server.js
+// this is overwritten by whatever /api/health reports, so .env is the single
+// source of truth. These values only matter when the page runs standalone.
+let format = 'openai';
+let MODEL  = 'nvidia/llama-3.3-nemotron-super-49b-v1';
+let DIRECT_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
+
+const K_STATE = 'macroTracker.state';
+const K_KEY   = 'macroTracker.apiKey';
+const K_SYNC  = 'macroTracker.sync';
+const K_PASS  = 'macroTracker.pass';
+
+const SYSTEM = `You estimate macros and minerals for food described in plain language, and return one entry per distinct food item using the log_items tool.
+
+GRAM-FIRST ESTIMATES
+- If the user gives grams or millilitres, use exactly that quantity.
+- If the user gives a household unit (1 scoop, 1 cup, 2 rotis, 1 katori, 1 idli, 1 ladle), first convert it to a realistic gram weight, put that weight in the item name, and estimate from it.
+- All numbers are for the TOTAL quantity described, never per 100 g.
+
+COMPLETE-PROTEIN RULE (strict — this is the most important rule)
+- Protein is counted ONLY from complete protein sources: whey, casein, milk, egg, chicken, mutton, goat, lamb, beef, fish, prawns, seafood, paneer, curd, yogurt, cheese, and other dairy or animal protein. For these set protein_source = "complete" and report protein normally.
+- For EVERY other food set protein_source = "incomplete" and protein = 0, even though the food really does contain protein. This includes: fruit, oats, rice, wheat, roti, chapati, bread, millets, dal, lentils, legumes, beans, chickpeas, rajma, soy, tofu, nuts, seeds, peanut butter, collagen or peptide supplements, vegetables and greens.
+- For foods with negligible protein (oil, ghee, butter, sugar, honey, jaggery) set protein_source = "none" and protein = 0.
+- Reporting protein as 0 is a REPORTING RULE ONLY. It must never change the calorie, fat or carb numbers. A 50 g serving of oats still has ~190 kcal and ~32 g carbs; only its protein field is zeroed.
+
+MINERALS (zinc, iron, magnesium)
+- Report zinc, iron and magnesium in milligrams for the TOTAL quantity described, for every item.
+- The complete-protein rule does NOT apply to minerals. Plant foods DO count here. Report the real mineral content of oats, rice, dal, nuts, seeds, greens and vegetables in full.
+- Report the mineral CONTENT of the food, not an absorbed amount. Do not discount plant iron or zinc for phytate — the targets already account for that.
+- Minerals are heat-stable. Cooking does not destroy them, so do not discount a cooked dish for zinc, iron or magnesium.
+- Cooked grains and dals absorb water. Estimate from the RAW weight when the user gives a cooked weight: cooked rice is roughly one third raw, cooked dal roughly one quarter raw.
+- USE THE TABLE BELOW. It is authoritative. Prefer it over your own recall, scale it to the actual quantity, and only fall back on your own knowledge for a food that is not listed.
+
+VITAMIN C — REPORT WHAT SURVIVES COOKING
+- Report vitamin C in milligrams for the TOTAL quantity, in the field vitamin_c.
+- Unlike the minerals, vitamin C is destroyed by heat and leaches into cooking water. Start from the raw value, then apply the loss for how the food was actually prepared:
+  raw or fresh juice: keep 100%. Squeezed on at the end after cooking: keep 100%.
+  steamed or microwaved: keep 75%. Stir-fried, sauteed, poriyal, thoran: keep 65%.
+  pressure cooked: keep 50%. Boiled, simmered in a gravy, sambar, kootu, curry, soup: keep 40%.
+  slow-simmered a long time, or reheated leftovers: keep 30%.
+- The table's vitamin C column is the RAW value. Apply the cooking loss to it.
+- Grains, dals, rice, oats, nuts, seeds, oil, sugar, and ALL meat, fish, egg and dairy are 0. Milk has a trace but report 0.
+- When a variety or colour is not stated, assume the common Indian default: capsicum means green, not red. Chilli means green. Grapes, apples and mangoes are ordinary table varieties.
+- A squeeze of lemon is about 5 ml of juice, so about 2 mg. One whole lemon is about 30 ml, so about 12 mg.
+- Vitamin C also degrades as cut fruit sits. If the user says a juice or salad was made hours earlier, cut it by a further quarter.
+
+REFERENCE TABLE — mg per 100 g, as "Zn/Fe/Mg/C"
+Grains and flours are RAW. Dals and legumes are RAW. Meat and fish are COOKED. Vegetables and fruit are RAW.
+GRAINS  rice-white 1.1/0.8/25/0 · rice-brown 2/1.5/143/0 · atta 2.6/4/140/0 · maida 0.7/1.2/22/0 · oats 3.6/4.7/177/0 · ragi 2.3/3.9/137/0 · bajra 3.1/6.4/137/0 · jowar 1.7/4.1/165/0 · quinoa 3.1/4.6/197/0 · poha 1.2/2.8/50/0 · rava 1.1/1.2/47/0 · idli-dosa batter 1.1/1.4/35/0 · bread 0.7/3.6/23/0
+DALS  toor 2.7/5/130/0 · moong 2.7/5/130/0 · urad 3.4/7.6/190/0 · chana dal 3.4/5.3/140/0 · masoor 3.3/7.5/122/0 · rajma 2.8/8.2/140/4 · kabuli chana 3.4/6.2/115/4 · black chana 3/9.5/120/3 · soya chunks 4/8/200/0 · peanuts 3.3/4.6/168/0
+NUTS AND SEEDS  almonds 3.1/3.7/270/0 · cashews 5.8/6.7/292/0 · walnuts 3.1/2.9/158/1.3 · pistachios 2.2/3.9/121/5 · pumpkin seeds 7.6/8.8/550/2 · sunflower seeds 5/5.2/325/1.4 · sesame 7.8/14.6/351/0 · flaxseed 4.3/5.7/392/0 · chia 4.6/7.7/335/1.6 · fresh coconut 1.1/2.4/32/3
+DAIRY AND EGG  milk 0.4/0/11/0 · curd 0.6/0.1/12/0 · paneer 1.5/0.2/25/0 · cheese 3.1/0.7/28/0 · egg 1.3/1.8/12/0 · whey isolate 1.7/1/83/0
+MEAT AND FISH  chicken breast 1/0.7/28/0 · chicken thigh 2/1/23/0 · mutton or goat 5.3/3.7/22/0 · goat liver 5.3/6.5/21/1 · fish rohu or katla 1/1/30/0 · sardine 1.3/2.9/39/0 · prawns 1.6/0.5/39/0
+VEGETABLES  spinach or palak 0.5/2.7/79/28 · keerai or amaranth 0.9/2.3/55/43 · drumstick leaves 0.6/4/147/220 · methi leaves 1/1.9/67/52 · coriander 0.5/1.8/26/27 · curry leaves 0.2/0.9/44/4 · tomato 0.2/0.3/11/14 · onion 0.2/0.2/10/7 · potato 0.3/0.8/23/20 · carrot 0.2/0.3/12/6 · french beans 0.2/1/25/12 · cabbage 0.2/0.5/12/36 · cauliflower 0.3/0.4/15/48 · broccoli 0.4/0.7/21/89 · brinjal 0.2/0.2/14/2 · bhindi 0.6/0.6/57/23 · capsicum-green 0.1/0.3/10/80 · pumpkin 0.3/0.8/12/9 · bottle gourd 0.7/0.2/11/10 · beetroot 0.35/0.8/23/5 · mushroom 0.5/0.5/9/2 · moong sprouts 1.1/1.9/48/13
+FRUIT  banana 0.2/0.3/27/9 · apple 0.04/0.1/5/5 · orange 0.07/0.1/10/53 · sweet lime 0.1/0.1/9/30 · guava 0.2/0.3/22/228 · amla 0.1/1.2/10/600 · papaya 0.08/0.25/21/61 · mango 0.1/0.2/10/36 · pineapple 0.1/0.3/12/48 · watermelon 0.1/0.2/10/8 · grapes 0.07/0.4/7/4 · pomegranate 0.35/0.3/12/10 · dates 0.4/1/43/0 · lemon juice 0.05/0.1/6/39
+OTHER  jaggery 0.2/2.6/70/0 · honey 0.2/0.4/2/0.5 · dark chocolate 85% 3.3/11.9/228/0 · coconut water 0.1/0.3/25/2.4 · tamarind 0.1/2.8/92/3 · ginger 0.3/0.6/43/5 · garlic 1.2/1.7/25/31 · green chilli 0.3/1.2/25/143 · oil, ghee, butter, sugar all 0/0/0/0
+
+MIXED DISHES
+- If the user lists components, split them into separate items. Otherwise report the dish as one item.
+- For a single mixed item, add up the minerals from ALL its ingredients, including the plant ones, and apply the vitamin C cooking loss for how the dish was cooked.
+- For a single mixed item, set protein_source = "complete" only when a complete-protein ingredient is genuinely part of the dish, and then count ONLY the protein coming from that ingredient. Chicken biryani: count the chicken's protein, not the rice's. Egg curry: count the egg's protein, not the gravy's.
+- Plain veg biryani, sambar, rasam, dal, kootu, poriyal, keerai, chana masala: protein_source = "incomplete", protein = 0.
+
+INDIAN AND SOUTH INDIAN FOODS
+Know realistic home and restaurant portion weights for: idli, dosa, masala dosa, uttapam, upma, pongal, vada, sambar, rasam, keerai (greens), kootu, poriyal, avial, thoran, curd rice, lemon rice, biryani, korma, roti, chapati, paratha, puttu, appam, idiyappam, chutney, payasam. Be realistic about cooking oil in fried, sauteed or tempered dishes — do not under-count fat.
+
+ARITHMETIC CHECK — do this before returning, every time
+1. Calories must be consistent with 4x(true protein) + 9x(fat) + 4x(carbs) within about 10%, using the food's TRUE protein content even when you are reporting protein as 0. Fix the numbers if they do not line up.
+2. Scaling check. For every micronutrient you took from the reference table, restate the multiplication in the form (table value) x (grams / 100) and confirm the result you are about to send matches it. Losing or adding a factor of 10 here is the most common mistake. 100 g of a food must give exactly the table value, 150 g must give 1.5x it, 30 g must give 0.3x it.
+3. Magnitude check. Magnesium for a normal portion of a magnesium-rich food is tens to hundreds of mg, not single digits. Zinc and iron for a normal portion are usually under 10 mg. If a number looks an order of magnitude off for the food and the portion, you have slipped a decimal — recompute it.`;
+
+const CHAT_SYSTEM = `You are the assistant inside a personal macro tracker. The user is cutting for fat loss on 2150 kcal, 110 g protein, 65 g fat and 280 g carbs a day. They also track four micronutrients: 17 mg zinc, 19 mg iron, 440 mg magnesium, 80 mg vitamin C.
+
+Every turn you receive a <current_log> block holding their targets, running totals and everything logged today. Read it. Never ask for something already in it.
+
+WHEN TO LOG, WHEN TO TALK
+- Call the log_items tool when the user reports food they actually ate or are eating: "50g oats", "had two idlis", "just finished 200 g curd", "add a scoop of whey".
+- Do NOT log when they are asking, planning or speculating: "should I have rice?", "what gets me to my protein?", "how many calories in a dosa?", "what if I skip dinner?". Answer in words.
+- If a message is genuinely ambiguous, ask one short question instead of logging.
+- Never log food the user did not mention.
+- Every item needs a meal. Scan the whole message for one first — "for breakfast", "at lunch", "dinner was", "as a snack" all name a meal, and it may appear before or after the food. Only when the user names none should you use default_meal from <current_log>, which is just a guess from the clock.
+
+CHANGING WHAT IS ALREADY LOGGED
+- Every item in <current_log> carries an id in square brackets, like [a1b2c3d4]. Use those ids.
+- Correcting something: edit_items. "the rice was 300 g", "that was paneer not tofu", "move the curd to lunch".
+- Removing something: delete_items. "drop the sambar", "I didn't have the second idli", "clear breakfast".
+- When you edit a quantity, re-estimate every macro for the new amount. If you change protein you must also send protein_source.
+- Only touch items the user clearly means. If two items could match, ask which one instead of guessing.
+- Never edit or delete as a side effect of a question. "is the rice too much?" is a question, not an instruction to remove it.
+
+REPLIES
+- One to three sentences. This is read on a phone.
+- After logging, the tool result gives you the recalculated totals. Quote those numbers, never your own arithmetic.
+- Be direct and practical. No preamble, no restating the question, no bullet lists unless you are comparing options.
+- When you suggest food, respect the complete-protein rule below. Suggesting dal, rice or nuts to close a protein gap is wrong: those count as zero protein here. Suggest whey, milk, egg, chicken, mutton, fish, paneer, curd or yogurt.
+- Minerals are the opposite: plant foods are the best answer there. For zinc suggest pumpkin seeds, cashews, mutton, egg, curd. For iron suggest greens and keerai, dal, rajma, sesame, jaggery, mutton, liver. For magnesium suggest pumpkin seeds, almonds, dark chocolate, millets, spinach, banana. For vitamin C suggest amla, guava, orange, sweet lime, capsicum, and raw or barely cooked vegetables.
+- Vitamin C and iron work together: vitamin C roughly doubles absorption of plant iron, so tell the user to eat them in the SAME meal. Squeezing lemon over the food after it is off the heat is the cheapest way to do it, since heat is what destroys vitamin C. Also say to keep tea or coffee an hour away from an iron-heavy meal.
+- If the user is short on vitamin C, prefer a raw fix over cooking something new. Sambar and kootu keep well under half of what went in.
+- The user is in a deficit. If they are near or over on calories, say so plainly rather than encouraging more food. When they are short on a mineral but out of calories, name the densest option for the fewest calories rather than telling them to eat more in general.
+
+${SYSTEM}`;
+
+const TOOL = {
+  name: 'log_items',
+  description: 'Return the estimated macros for every food item the user described.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      items: {
+        type: 'array',
+        description: 'One entry per distinct food item.',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Short label including the quantity, e.g. "50 g oats" or "1 scoop (30 g) whey".' },
+            calories: { type: 'number', description: 'Total kcal for the quantity described.' },
+            protein: { type: 'number', description: 'Protein in grams. MUST be 0 unless protein_source is "complete".' },
+            fat: { type: 'number', description: 'Fat in grams for the quantity described.' },
+            carbs: { type: 'number', description: 'Carbohydrate in grams for the quantity described.' },
+            protein_source: { type: 'string', enum: ['complete', 'incomplete', 'none'], description: 'Whether the protein in this food comes from a complete source.' },
+            zinc: { type: 'number', description: 'Zinc in mg for the quantity described. Counts from plant foods too.' },
+            iron: { type: 'number', description: 'Iron in mg for the quantity described. Counts from plant foods too.' },
+            magnesium: { type: 'number', description: 'Magnesium in mg for the quantity described. Counts from plant foods too.' },
+            vitamin_c: { type: 'number', description: 'Vitamin C in mg AFTER the cooking loss for how this food was prepared. 0 for all grains, dals, nuts, meat, fish, egg, dairy and fats.' },
+            meal: { type: 'string', enum: MEALS, description: 'Required. If the user named a meal anywhere in their message ("for breakfast", "at lunch", "dinner was"), use that one. Only fall back to default_meal from <current_log> when they named none.' }
+          },
+          required: ['name', 'calories', 'protein', 'fat', 'carbs', 'protein_source', 'zinc', 'iron', 'magnesium', 'vitamin_c', 'meal']
+        }
+      }
+    },
+    required: ['items']
+  }
+};
+
+const EDIT_TOOL = {
+  name: 'edit_items',
+  description: 'Correct one or more items already logged today. Only send the fields that change.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      edits: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'The id shown in square brackets in <current_log>.' },
+            name: { type: 'string', description: 'New label including the new quantity.' },
+            calories: { type: 'number' },
+            protein: { type: 'number', description: 'Only send if protein changes. Requires protein_source alongside it.' },
+            fat: { type: 'number' },
+            carbs: { type: 'number' },
+            protein_source: { type: 'string', enum: ['complete', 'incomplete', 'none'] },
+            zinc: { type: 'number', description: 'New zinc in mg. Send whenever the quantity or the food changes.' },
+            iron: { type: 'number', description: 'New iron in mg. Send whenever the quantity or the food changes.' },
+            magnesium: { type: 'number', description: 'New magnesium in mg. Send whenever the quantity or the food changes.' },
+            vitamin_c: { type: 'number', description: 'New vitamin C in mg after cooking loss. Send whenever the quantity, the food, or the cooking method changes.' },
+            meal: { type: 'string', enum: MEALS }
+          },
+          required: ['id']
+        }
+      }
+    },
+    required: ['edits']
+  }
+};
+
+const DELETE_TOOL = {
+  name: 'delete_items',
+  description: 'Remove one or more items already logged today.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      ids: {
+        type: 'array',
+        description: 'Ids shown in square brackets in <current_log>.',
+        items: { type: 'string' }
+      }
+    },
+    required: ['ids']
+  }
+};
+
+/* ============================================================
+   Number helpers — all arithmetic on stored (already rounded)
+   values, in integer tenths, so displayed rows always sum
+   exactly to the displayed totals.
+   ============================================================ */
+const r0 = n => Math.round(Number(n) || 0);
+const r1 = n => Math.round((Number(n) || 0) * 10) / 10;
+const clamp0 = n => (n < 0 ? 0 : n);
+
+function sumCal(items) {
+  let t = 0;
+  for (const it of items) t += it.cal;
+  return t;
+}
+function sumG(items, k) {
+  let tenths = 0;
+  for (const it of items) tenths += Math.round(it[k] * 10);
+  return tenths / 10;
+}
+// Show up to one decimal, trimming a trailing ".0".
+function g(n) {
+  const v = r1(n);
+  return Number.isInteger(v) ? String(v) : v.toFixed(1);
+}
+
+/* ============================================================
+   State
+   ============================================================ */
+let state = null;
+let apiKey = '';
+let editingId = null;
+
+// True when served by server.js with a key in .env — the request is then
+// proxied through our own origin and the key never enters the browser.
+let serverMode = false;
+
+let providerName = 'nvidia';
+
+/* ============================================================
+   Access
+   ============================================================ */
+// Set only when the server asks for a passphrase. Held on the device so it is
+// typed once per phone or laptop, and sent with every request that touches the
+// log or the API proxy.
+let passphrase = '';
+let needsPass = false;
+
+function authFetch(url, opts) {
+  const o = Object.assign({}, opts);
+  o.headers = Object.assign({}, o.headers);
+  if (passphrase) o.headers['x-macro-pass'] = passphrase;
+  return fetch(url, o);
+}
+
+// A rejected passphrase is worth forgetting: it is either wrong or has been
+// changed on the server, and either way the device has to ask again.
+async function forgetPass() {
+  passphrase = '';
+  try { await window.storage.removeItem(K_PASS); } catch (e) { /* ignore */ }
+}
+
+function showGate(msg) {
+  const gate = $('gate');
+  if (!gate) return;
+  gate.hidden = false;
+  const m = $('gateMsg');
+  m.hidden = !msg;
+  if (msg) m.textContent = msg;
+  setTimeout(() => $('gatePass').focus(), 50);
+}
+
+// Resolves only once the server has accepted a passphrase, so the caller can
+// treat everything after it as authorised.
+function askForPass() {
+  return new Promise(resolve => {
+    const input = $('gatePass');
+    const go = $('gateGo');
+    showGate();
+
+    const attempt = async () => {
+      const typed = input.value.trim();
+      if (!typed || go.disabled) return;
+      go.disabled = true;
+      go.textContent = 'Checking…';
+      passphrase = typed;
+
+      let accepted = false, note = 'That passphrase was not accepted.';
+      try {
+        const res = await authFetch('/api/health', { cache: 'no-store' });
+        if (res.status === 429) note = 'Too many tries. Wait a minute, then try again.';
+        const info = res.ok ? await res.json() : null;
+        accepted = Boolean(info && info.authed);
+      } catch (e) {
+        note = 'Could not reach the server.';
+      }
+
+      go.disabled = false;
+      go.textContent = 'Open';
+
+      if (!accepted) {
+        passphrase = '';
+        input.value = '';
+        showGate(note);
+        return;
+      }
+
+      await window.storage.setItem(K_PASS, passphrase).catch(() => {});
+      input.value = '';
+      $('gate').hidden = true;
+      resolve();
+    };
+
+    go.addEventListener('click', attempt);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); attempt(); } });
+  });
+}
+
+async function detectServer() {
+  try {
+    const res = await authFetch('/api/health', { cache: 'no-store' });
+    if (!res.ok) return false;
+    const info = await res.json();
+    if (!(info && info.ok)) return false;
+
+    // The server wants a passphrase and has not accepted ours — which covers
+    // having none stored and having one the server no longer honours.
+    if (info.auth && !info.authed) { needsPass = true; return false; }
+    needsPass = false;
+
+    if (!info.key) return false;
+    // Adopt whatever .env selected, so the page never disagrees with the proxy.
+    if (info.format) format = info.format;
+    if (info.model) MODEL = info.model;
+    if (info.provider) providerName = info.provider;
+    return true;
+  } catch (e) {
+    return false; // opened as a plain file / static host → direct mode
+  }
+}
+
+const uid = () => Math.random().toString(36).slice(2, 10);
+const newDay = n => ({ id: uid(), label: 'Day ' + n, items: [], chat: [] });
+const freshState = () => ({ v: 1, active: 0, days: [newDay(1)] });
+
+function day() { return state.days[state.active]; }
+
+// Repair anything the log is missing: days saved before chat existed, and
+// items logged before micros were tracked — those read as 0 rather than
+// breaking the sums. Runs on every copy that arrives, local or from the server.
+function normalizeState() {
+  if (!state || !Array.isArray(state.days) || !state.days.length) state = freshState();
+  if (state.active >= state.days.length || state.active < 0) state.active = state.days.length - 1;
+  for (const d of state.days) {
+    if (!Array.isArray(d.items)) d.items = [];
+    if (!Array.isArray(d.chat)) d.chat = [];
+    for (const it of d.items) {
+      for (const m of MICROS) if (typeof it[m.k] !== 'number') it[m.k] = 0;
+    }
+  }
+}
+
+function save() {
+  if (syncMode) dirty = true;
+  saveLocal();
+  schedulePush();
+}
+
+function saveLocal() {
+  return Promise.all([
+    window.storage.setItem(K_STATE, JSON.stringify(state)),
+    window.storage.setItem(K_SYNC, JSON.stringify({ rev, dirty }))
+  ]).catch(e => console.warn('save failed', e));
+}
+
+async function load() {
+  let raw = null, key = null, sync = null, pass = null;
+  try { raw = await window.storage.getItem(K_STATE); } catch (e) { console.warn(e); }
+  try { key = await window.storage.getItem(K_KEY); } catch (e) { console.warn(e); }
+  try { sync = await window.storage.getItem(K_SYNC); } catch (e) { console.warn(e); }
+  try { pass = await window.storage.getItem(K_PASS); } catch (e) { console.warn(e); }
+
+  apiKey = key || '';
+  passphrase = pass || '';
+  try {
+    const parsed = raw ? JSON.parse(raw) : null;
+    state = (parsed && Array.isArray(parsed.days) && parsed.days.length) ? parsed : freshState();
+  } catch (e) {
+    state = freshState();
+  }
+
+  // Which server revision this cache was in step with, and whether it holds
+  // edits the server has not accepted yet (logged while the server was off).
+  let synced = false;
+  try {
+    const s = sync ? JSON.parse(sync) : null;
+    if (s && typeof s.rev === 'number') { rev = s.rev; dirty = Boolean(s.dirty); synced = true; }
+  } catch (e) { /* first run */ }
+
+  normalizeState();
+
+  // A log written before this device ever synced is unpublished work, not a
+  // stale copy: mark it dirty so the first exchange merges it upward instead of
+  // adopting the server's copy over the top of it.
+  if (!synced && state.days.some(d => d.items.length || d.chat.length)) dirty = true;
+}
+
+/* ============================================================
+   Sync — the log lives on server.js, so every device sees it
+   ============================================================ */
+// IndexedDB is a cache: it renders instantly and keeps the page usable when the
+// server is off. server.js holds the copy of record, stamped with a revision
+// number, which is what keeps the phone and the laptop showing the same log.
+let syncMode = false;   // server answered /api/state
+let rev = 0;            // newest server revision this device has seen
+let dirty = false;      // local edits the server has not accepted yet
+let pushing = false;
+let pushAgain = false;
+let pushTimer = null;
+let syncWarned = false;
+
+// Union of both sides, matched by id. Only used when a device edited while it
+// could not reach the server: losing a logged meal is worse than an item
+// deleted on one device reappearing, so nothing is dropped here.
+function mergeState(mine, theirs) {
+  if (!theirs || !Array.isArray(theirs.days)) return mine;
+  const remote = new Map(theirs.days.map(d => [d.id, d]));
+  const days = [];
+
+  for (const a of mine.days) {
+    const b = remote.get(a.id);
+    if (!b) { days.push(a); continue; }
+    remote.delete(a.id);
+    const items = b.items.slice();
+    const have = new Set(items.map(i => i.id));
+    for (const it of a.items) if (!have.has(it.id)) items.push(it);
+    // Chat is append-only, so the longer transcript is the newer one.
+    days.push({ id: a.id, label: a.label, items, chat: a.chat.length >= b.chat.length ? a.chat : b.chat });
+  }
+  for (const b of remote.values()) days.push(b);
+
+  return { v: 1, active: mine.active, days };
+}
+
+// Returns { ok, changed } — ok false simply means the page is running without a
+// server (opened as a file, or the Mac is asleep), which is not an error.
+async function pullState() {
+  let doc;
+  try {
+    const res = await authFetch('/api/state', { cache: 'no-store' });
+    if (res.status === 401) { await forgetPass(); needsPass = true; return { ok: false, changed: false }; }
+    if (!res.ok) return { ok: false, changed: false };
+    doc = await res.json();
+  } catch (e) {
+    return { ok: false, changed: false };
+  }
+  if (!doc || typeof doc.rev !== 'number') return { ok: false, changed: false };
+  syncMode = true;
+
+  // Server has no log yet: this device's copy becomes the starting point.
+  if (doc.rev === 0 || !doc.state) {
+    if (state.days.some(d => d.items.length || d.chat.length)) dirty = true;
+    return { ok: true, changed: false };
+  }
+
+  // Same revision means the server holds our base — nothing to take from it.
+  if (doc.rev === rev) return { ok: true, changed: false };
+
+  state = dirty ? mergeState(state, doc.state) : doc.state;
+  rev = doc.rev;
+  normalizeState();
+  editingId = null;
+  await saveLocal();
+  return { ok: true, changed: true };
+}
+
+function schedulePush() {
+  if (!syncMode) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushState, 400);
+}
+
+async function pushState(opts) {
+  if (!syncMode) return;
+  if (pushing) { pushAgain = true; return; }
+  const force = Boolean(opts && opts.force);
+  const tries = (opts && opts.tries) || 0;
+
+  pushing = true;
+  try {
+    const res = await authFetch('/api/state', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ rev, state, force })
+    });
+
+    if (res.status === 401) {
+      await forgetPass();
+      needsPass = true;
+      showGate('Passphrase no longer accepted. Enter it again to keep syncing.');
+      return;
+    }
+
+    // Another device wrote first: fold its entries in and try again.
+    if (res.status === 409) {
+      const doc = await res.json();
+      state = mergeState(state, doc.state);
+      rev = doc.rev;
+      normalizeState();
+      await saveLocal();
+      render();
+      pushing = false;
+      if (tries < 3) return pushState({ tries: tries + 1 });
+      return;
+    }
+
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const out = await res.json();
+    rev = out.rev;
+    dirty = false;
+    syncWarned = false;
+    await saveLocal();
+  } catch (e) {
+    // Server off or unreachable. The edit is safe in IndexedDB and goes up on
+    // the next save or sync tick, so this only needs saying once.
+    if (!syncWarned) {
+      syncWarned = true;
+      showMsg('Server unreachable — saved on this device only, will sync when it is back.');
+    }
+  } finally {
+    pushing = false;
+    if (pushAgain) { pushAgain = false; schedulePush(); }
+  }
+}
+
+// Picks up what other devices logged. Only while the tab is visible, and never
+// mid-request or mid-edit, so the page never rearranges under your hands.
+function startSyncLoop() {
+  const tick = () => {
+    if (document.visibilityState !== 'visible' || busy || pushing) return;
+    if (dirty) { pushState(); return; }
+    if (editingId) return;
+    pullState().then(r => { if (r.changed) render(); });
+  };
+  document.addEventListener('visibilitychange', tick);
+  window.addEventListener('focus', tick);
+  setInterval(tick, 15000);
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+const $ = id => document.getElementById(id);
+
+function renderDays() {
+  const sel = $('daySel');
+  sel.innerHTML = state.days.map((d, i) =>
+    `<option value="${i}"${i === state.active ? ' selected' : ''}>${d.label}</option>`).join('');
+}
+
+function statBlock(name, used, target, unit) {
+  const left = r1(target - used);
+  const pct = target > 0 ? Math.min(100, (used / target) * 100) : 0;
+  const over = left < 0;
+  return `
+    <div class="stat">
+      <div class="stat-top">
+        <div class="stat-name">${name}</div>
+        <div class="stat-val num"><b>${g(used)}</b> <span>/ ${target} ${unit}</span></div>
+      </div>
+      <div class="bar"><i class="${over ? 'over' : ''}" style="width:${pct}%"></i></div>
+      <div class="stat-top" style="margin:4px 0 0">
+        <div style="flex:1"></div>
+        <div class="stat-left num ${over ? 'over' : ''}">${over ? g(-left) + ' ' + unit + ' over' : g(left) + ' ' + unit + ' left'}</div>
+      </div>
+    </div>`;
+}
+
+// Minerals get a compact strip rather than a full bar each — they matter, but
+// not enough to push the four macros off a phone screen.
+function microBlock(m, used) {
+  const target = TARGETS[m.k];
+  const pct = Math.min(100, (used / target) * 100);
+  const done = used >= target;
+  return `
+    <div class="ms">
+      <div class="ms-top">
+        <span class="ms-name">${m.name}</span>
+        <span class="num"><b>${g(used)}</b><span class="ms-t">/${target}</span></span>
+      </div>
+      <div class="bar"><i class="${done ? 'done' : ''}" style="width:${pct}%"></i></div>
+    </div>`;
+}
+
+function renderTotals() {
+  const items = day().items;
+  const t = dayTotals();
+
+  const notes = [];
+  if (items.length) {
+    if (t.f > TARGETS.f) notes.push(`<div class="note warn">Fat ${g(t.f - TARGETS.f)} g over</div>`);
+    if (t.c < TARGETS.c) notes.push(`<div class="note">Carbs ${g(TARGETS.c - t.c)} g short</div>`);
+    // Only once most of the day's calories are spent does a mineral gap mean
+    // anything — before that everything is "short" and the note is noise.
+    if (t.cal >= TARGETS.cal * 0.75) {
+      for (const m of MICROS) {
+        if (t[m.k] < TARGETS[m.k] * 0.6) {
+          notes.push(`<div class="note warn">${m.name} low — ${g(TARGETS[m.k] - t[m.k])} ${m.unit} to go</div>`);
+        }
+      }
+    }
+  }
+
+  $('totals').innerHTML =
+    statBlock('Calories', t.cal, TARGETS.cal, 'kcal') +
+    statBlock('Protein', t.p, TARGETS.p, 'g') +
+    statBlock('Fat', t.f, TARGETS.f, 'g') +
+    statBlock('Carbs', t.c, TARGETS.c, 'g') +
+    `<div class="micros">${MICROS.map(m => microBlock(m, t[m.k])).join('')}</div>` +
+    (notes.length ? `<div class="notes">${notes.join('')}</div>` : '');
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, ch =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+function numsHtml(cal, p, f, c) {
+  return `<div class="nums num">
+    <div class="n"><span class="lbl">kcal</span>${g(cal)}</div>
+    <div class="n"><span class="lbl">P</span>${g(p)}</div>
+    <div class="n"><span class="lbl">F</span>${g(f)}</div>
+    <div class="n"><span class="lbl">C</span>${g(c)}</div>
+  </div>`;
+}
+
+// Second, quieter line. Omitted entirely when a food has no minerals worth
+// showing (oil, sugar) so rows stay short.
+function microHtml(it) {
+  if (!(it.zn || it.fe || it.mg || it.vc)) return '';
+  return `<div class="micro num">Zn ${g(it.zn)} · Fe ${g(it.fe)} · Mg ${g(it.mg)} · C ${g(it.vc)}</div>`;
+}
+
+function rowHtml(it) {
+  if (it.id === editingId) {
+    return `<div class="row" data-id="${it.id}">
+      <div class="edit">
+        <input type="text" data-e="name" value="${esc(it.name)}" aria-label="Name">
+        <label class="fld">kcal <input class="num-in" data-e="cal" type="number" step="1" min="0" value="${it.cal}"></label>
+        <label class="fld">P <input class="num-in" data-e="p" type="number" step="0.1" min="0" value="${it.p}"></label>
+        <label class="fld">F <input class="num-in" data-e="f" type="number" step="0.1" min="0" value="${it.f}"></label>
+        <label class="fld">C <input class="num-in" data-e="c" type="number" step="0.1" min="0" value="${it.c}"></label>
+        <label class="fld">Zn <input class="num-in" data-e="zn" type="number" step="0.1" min="0" value="${it.zn}"></label>
+        <label class="fld">Fe <input class="num-in" data-e="fe" type="number" step="0.1" min="0" value="${it.fe}"></label>
+        <label class="fld">Mg <input class="num-in" data-e="mg" type="number" step="1" min="0" value="${it.mg}"></label>
+        <label class="fld">C <input class="num-in" data-e="vc" type="number" step="0.1" min="0" value="${it.vc}"></label>
+        <select data-e="meal">${MEALS.map(m => `<option${m === it.meal ? ' selected' : ''}>${m}</option>`).join('')}</select>
+        <button class="btn primary" data-act="save">Save</button>
+        <button class="btn ghost" data-act="cancel">Cancel</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="row" data-id="${it.id}">
+    <div class="nm">${esc(it.name)}</div>
+    ${numsHtml(it.cal, it.p, it.f, it.c)}
+    ${microHtml(it)}
+    <div class="acts">
+      <button class="btn ghost" data-act="edit" aria-label="Edit">✎</button>
+      <button class="btn ghost" data-act="del" aria-label="Delete">✕</button>
+    </div>
+  </div>`;
+}
+
+function renderList() {
+  const items = day().items;
+  if (!items.length) {
+    $('list').innerHTML = `<div class="empty">Nothing logged yet.</div>`;
+    return;
+  }
+
+  const head = `<div class="colhead">
+      <div></div>
+      <div class="nums"><div class="n">kcal</div><div class="n">P</div><div class="n">F</div><div class="n">C</div></div>
+      <div class="spacer"></div>
+    </div>`;
+
+  let html = head;
+  for (const meal of MEALS) {
+    const group = items.filter(i => i.meal === meal);
+    if (!group.length) continue;
+    const zn = sumG(group, 'zn'), fe = sumG(group, 'fe'), mgm = sumG(group, 'mg'), vc = sumG(group, 'vc');
+    html += `<div class="meal">
+      <div class="meal-head">
+        <div class="meal-name">${meal}</div>
+        <div class="meal-sub num">${g(sumCal(group))} kcal · P ${g(sumG(group, 'p'))} · F ${g(sumG(group, 'f'))} · C ${g(sumG(group, 'c'))}${
+          (zn || fe || mgm || vc) ? `<span class="meal-min"> · Zn ${g(zn)} · Fe ${g(fe)} · Mg ${g(mgm)} · C ${g(vc)}</span>` : ''}</div>
+      </div>
+      ${group.map(rowHtml).join('')}
+    </div>`;
+  }
+  $('list').innerHTML = html;
+}
+
+// Minimal markdown for replies: bullets and bold. Escaped first, so the
+// model's output can never inject markup.
+function fmt(text) {
+  const lines = esc(text).split('\n');
+  let out = '', inList = false;
+  for (const line of lines) {
+    const bullet = line.match(/^\s*[-*•]\s+(.*)$/);
+    if (bullet) {
+      if (!inList) { out += '<ul>'; inList = true; }
+      out += '<li>' + bullet[1] + '</li>';
+    } else {
+      if (inList) { out += '</ul>'; inList = false; }
+      out += line + '\n';
+    }
+  }
+  if (inList) out += '</ul>';
+  return out.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>').trim();
+}
+
+function renderChat() {
+  const el = $('transcript');
+  const chat = day().chat;
+  let html = chat.map(m => {
+    const cls = m.role === 'user' ? 'you' : m.role === 'did' ? 'did' : 'ai';
+    const inner = m.role === 'assistant' ? fmt(m.text) : esc(m.text);
+    return `<div class="bub ${cls}">${inner}</div>`;
+  }).join('');
+  if (busy) html += '<div class="typing">…</div>';
+  el.innerHTML = html;
+  el.scrollTop = el.scrollHeight;
+}
+
+function render() {
+  renderDays();
+  renderTotals();
+  renderList();
+  renderChat();
+  renderUndo();
+}
+
+function showMsg(text, info) {
+  const el = $('msg');
+  if (!text) { el.hidden = true; el.textContent = ''; return; }
+  el.hidden = false;
+  el.className = 'msg' + (info ? ' info' : '');
+  el.textContent = text;
+}
+
+/* ============================================================
+   Anthropic API
+   ============================================================ */
+function defaultMeal() {
+  const h = new Date().getHours();
+  return h < 11 ? 'Breakfast' : h < 16 ? 'Lunch' : h < 18 ? 'Snack' : 'Dinner';
+}
+
+// Snapshot of the day, handed to the model on every turn so it never has to
+// ask what has already been logged. Injected into the current user message
+// only — never stored in history, so it can't go stale.
+function stateBlock() {
+  const items = day().items;
+  const t = dayTotals();
+  const lines = items.length
+    ? items.map(i => `- [${i.id}] ${i.meal} | ${i.name} | ${i.cal} kcal | P ${g(i.p)} | F ${g(i.f)} | C ${g(i.c)} | Zn ${g(i.zn)} | Fe ${g(i.fe)} | Mg ${g(i.mg)} | VitC ${g(i.vc)}`).join('\n')
+    : '(nothing logged yet)';
+  return `<current_log day="${day().label}" default_meal="${defaultMeal()}">
+Grams: P protein, F fat, C carbs. Milligrams: Zn zinc, Fe iron, Mg magnesium, VitC vitamin C.
+Targets:   ${TARGETS.cal} kcal | P ${TARGETS.p} | F ${TARGETS.f} | C ${TARGETS.c} | Zn ${TARGETS.zn} | Fe ${TARGETS.fe} | Mg ${TARGETS.mg} | VitC ${TARGETS.vc}
+Logged:    ${t.cal} kcal | P ${g(t.p)} | F ${g(t.f)} | C ${g(t.c)} | Zn ${g(t.zn)} | Fe ${g(t.fe)} | Mg ${g(t.mg)} | VitC ${g(t.vc)}
+Remaining: ${g(TARGETS.cal - t.cal)} kcal | P ${g(TARGETS.p - t.p)} | F ${g(TARGETS.f - t.f)} | C ${g(TARGETS.c - t.c)} | Zn ${g(TARGETS.zn - t.zn)} | Fe ${g(TARGETS.fe - t.fe)} | Mg ${g(TARGETS.mg - t.mg)} | VitC ${g(TARGETS.vc - t.vc)}
+Items:
+${lines}
+</current_log>`;
+}
+
+// Executes a log_items tool call. Returns the recalculated totals as the tool
+// result, so the model's confirmation quotes our arithmetic, not its own.
+function applyLogItems(input) {
+  const raw = (input && input.items) || [];
+  const added = raw.map(it => ({
+    id: uid(),
+    name: String(it.name || 'Item').slice(0, 120),
+    meal: MEALS.includes(it.meal) ? it.meal : defaultMeal(),
+    cal: clamp0(r0(it.calories)),
+    // Complete-protein rule enforced here, whatever the model returned.
+    p: it.protein_source === 'complete' ? clamp0(r1(it.protein)) : 0,
+    f: clamp0(r1(it.fat)),
+    c: clamp0(r1(it.carbs)),
+    // Micros count from every food, plant included — no source rule here.
+    zn: clamp0(r1(it.zinc)),
+    fe: clamp0(r1(it.iron)),
+    mg: clamp0(r0(it.magnesium)),
+    vc: clamp0(r1(it.vitamin_c))
+  }));
+
+  if (!added.length) return { changed: false, receipts: [], result: 'No items were provided, so nothing was logged.' };
+
+  for (const it of added) day().items.push(it);
+  const zeroed = added.filter(a => a.p === 0).map(a => a.name);
+
+  return {
+    changed: true,
+    receipts: added.map(a => `+ ${a.name} → ${a.meal}`),
+    result: [
+      `Logged ${added.length} item(s): ${added.map(a => `${a.name} (${a.meal})`).join(', ')}.`,
+      zeroed.length ? `Protein set to 0 for: ${zeroed.join(', ')} (not complete sources).` : '',
+      totalsLine()
+    ].filter(Boolean).join(' ')
+  };
+}
+
+function dayTotals() {
+  const items = day().items;
+  const t = { cal: sumCal(items) };
+  for (const k of ['p', 'f', 'c', 'zn', 'fe', 'mg', 'vc']) t[k] = sumG(items, k);
+  return t;
+}
+
+function totalsLine() {
+  const t = dayTotals();
+  return `Day total now ${t.cal} kcal | P ${g(t.p)} | F ${g(t.f)} | C ${g(t.c)} | ` +
+         `Zn ${g(t.zn)} | Fe ${g(t.fe)} | Mg ${g(t.mg)} | VitC ${g(t.vc)}. ` +
+         `Remaining ${g(TARGETS.cal - t.cal)} kcal | P ${g(TARGETS.p - t.p)} | F ${g(TARGETS.f - t.f)} | C ${g(TARGETS.c - t.c)} | ` +
+         `Zn ${g(TARGETS.zn - t.zn)} | Fe ${g(TARGETS.fe - t.fe)} | Mg ${g(TARGETS.mg - t.mg)} | VitC ${g(TARGETS.vc - t.vc)}.`;
+}
+
+function applyEditItems(input) {
+  const edits = (input && input.edits) || [];
+  const receipts = [], missing = [];
+  let changed = false;
+
+  for (const e of edits) {
+    const it = day().items.find(x => x.id === e.id);
+    if (!it) { missing.push(e.id); continue; }
+    const before = `${it.name} (${it.cal} kcal)`;
+
+    if (typeof e.name === 'string' && e.name.trim()) it.name = e.name.trim().slice(0, 120);
+    if (e.calories !== undefined) it.cal = clamp0(r0(e.calories));
+    if (e.fat !== undefined) it.f = clamp0(r1(e.fat));
+    if (e.carbs !== undefined) it.c = clamp0(r1(e.carbs));
+    if (e.zinc !== undefined) it.zn = clamp0(r1(e.zinc));
+    if (e.iron !== undefined) it.fe = clamp0(r1(e.iron));
+    if (e.magnesium !== undefined) it.mg = clamp0(r0(e.magnesium));
+    if (e.vitamin_c !== undefined) it.vc = clamp0(r1(e.vitamin_c));
+    if (MEALS.includes(e.meal)) it.meal = e.meal;
+    // Complete-protein rule again: protein can only become non-zero when the
+    // model explicitly declares the source complete.
+    if (e.protein !== undefined) {
+      it.p = e.protein_source === 'complete' ? clamp0(r1(e.protein)) : 0;
+    }
+
+    changed = true;
+    receipts.push(`~ ${before} → ${it.name} (${it.cal} kcal)`);
+  }
+
+  if (!changed) {
+    return { changed: false, receipts: [], result: missing.length
+      ? `No item found with id(s): ${missing.join(', ')}. Nothing was changed.`
+      : 'No edits were provided.' };
+  }
+  return {
+    changed: true, receipts,
+    result: `Updated ${receipts.length} item(s).` +
+            (missing.length ? ` Not found: ${missing.join(', ')}.` : '') + ' ' + totalsLine()
+  };
+}
+
+function applyDeleteItems(input) {
+  const ids = (input && input.ids) || [];
+  const receipts = [], missing = [];
+
+  for (const id of ids) {
+    const idx = day().items.findIndex(x => x.id === id);
+    if (idx === -1) { missing.push(id); continue; }
+    const [gone] = day().items.splice(idx, 1);
+    if (editingId === gone.id) editingId = null;
+    receipts.push(`− ${gone.name}`);
+  }
+
+  if (!receipts.length) {
+    return { changed: false, receipts: [], result: missing.length
+      ? `No item found with id(s): ${missing.join(', ')}. Nothing was deleted.`
+      : 'No ids were provided.' };
+  }
+  return {
+    changed: true, receipts,
+    result: `Deleted ${receipts.length} item(s).` +
+            (missing.length ? ` Not found: ${missing.join(', ')}.` : '') + ' ' + totalsLine()
+  };
+}
+
+/* ---- provider adapter -------------------------------------------------
+   Everything above this point is provider-agnostic. These four functions are
+   the only place the wire format shows up; the send() loop below works on the
+   normalised {text, calls, raw} shape they return.
+   ---------------------------------------------------------------------- */
+
+const TOOLS = [TOOL, EDIT_TOOL, DELETE_TOOL];
+
+// OpenAI wraps each schema in a "function" envelope; the JSON Schema inside is
+// identical, so the tool definitions themselves are shared.
+const OPENAI_TOOLS = TOOLS.map(t => ({
+  type: 'function',
+  function: { name: t.name, description: t.description, parameters: t.input_schema }
+}));
+
+function buildPayload(messages) {
+  if (format === 'anthropic') {
+    // The tools + system block is ~5k tokens and identical on every request.
+    // One cache breakpoint on the system block covers both (tools are ordered
+    // before system), so a follow-up re-reads them at a tenth of the price.
+    return {
+      model: MODEL,
+      max_tokens: 1500,
+      thinking: { type: 'disabled' },
+      system: [{ type: 'text', text: CHAT_SYSTEM, cache_control: { type: 'ephemeral' } }],
+      tools: TOOLS,
+      messages
+    };
+  }
+  return {
+    model: MODEL,
+    max_tokens: 1500,
+    // This is estimation, not writing. Keep sampling tight so the same food
+    // logged twice does not come back with different numbers.
+    temperature: 0.2,
+    top_p: 0.9,
+    // Nemotron toggles its reasoning trace off with this exact phrase. Other
+    // OpenAI-compatible models ignore the line harmlessly.
+    messages: [{ role: 'system', content: 'detailed thinking off\n\n' + CHAT_SYSTEM }].concat(messages),
+    tools: OPENAI_TOOLS,
+    tool_choice: 'auto'
+  };
+}
+
+// Reasoning models leak their scratchpad into the reply as <think> blocks.
+// Strip them so the user sees the answer, not the working.
+function stripThink(s) {
+  return String(s || '')
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/^[\s\S]*?<\/think>/i, '')
+    .trim();
+}
+
+function normalize(data) {
+  if (format === 'anthropic') {
+    const content = data.content || [];
+    return {
+      raw: content,
+      text: content.filter(b => b.type === 'text').map(b => b.text).join('').trim(),
+      calls: content.filter(b => b.type === 'tool_use').map(b => ({ id: b.id, name: b.name, input: b.input }))
+    };
+  }
+  const m = (data.choices && data.choices[0] && data.choices[0].message) || {};
+  const calls = (m.tool_calls || []).map(tc => {
+    let input = {};
+    // OpenAI sends arguments as a JSON *string*. A truncated or malformed one
+    // must not take down the turn — an empty input is handled downstream.
+    try { input = JSON.parse((tc.function && tc.function.arguments) || '{}'); } catch (e) { input = {}; }
+    return { id: tc.id, name: (tc.function && tc.function.name) || '', input };
+  });
+  return { raw: m, text: stripThink(m.content), calls };
+}
+
+// Append this hop's assistant turn plus its tool results, so the next hop sees
+// what was already run.
+function pushToolTurn(msgs, norm, results) {
+  if (format === 'anthropic') {
+    msgs.push({ role: 'assistant', content: norm.raw });
+    msgs.push({ role: 'user', content: results.map(r => {
+      const b = { type: 'tool_result', tool_use_id: r.id, content: r.content };
+      if (r.isError) b.is_error = true;
+      return b;
+    }) });
+    return;
+  }
+  msgs.push({ role: 'assistant', content: norm.raw.content || '', tool_calls: norm.raw.tool_calls });
+  for (const r of results) msgs.push({ role: 'tool', tool_call_id: r.id, content: r.content });
+}
+
+async function callApi(messages) {
+  const body = JSON.stringify(buildPayload(messages));
+
+  // Server mode: post to our own origin, which adds the key from .env.
+  // Direct mode: call the provider straight from the browser with the saved key.
+  const headers = { 'content-type': 'application/json' };
+  if (!serverMode) {
+    if (format === 'anthropic') {
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+      headers['anthropic-dangerous-direct-browser-access'] = 'true';
+    } else {
+      headers.authorization = 'Bearer ' + apiKey;
+    }
+  }
+
+  const res = await authFetch(serverMode ? '/api/parse' : DIRECT_URL, { method: 'POST', headers, body });
+
+  if (res.status === 401 && serverMode) {
+    await forgetPass();
+    needsPass = true;
+    showGate('Passphrase no longer accepted. Enter it again.');
+    throw new Error('Passphrase required.');
+  }
+
+  let data = null;
+  try { data = await res.json(); } catch (e) { /* fall through */ }
+
+  if (!res.ok || (data && data.type === 'error')) {
+    const err = data && data.error;
+    throw new Error((err && (err.message || err)) || ('HTTP ' + res.status));
+  }
+  return data;
+}
+
+/* ============================================================
+   Actions
+   ============================================================ */
+let busy = false;
+let undo = null;      // { dayId, items } restorable by the Undo button
+let undoSnap = null;  // snapshot taken mid-turn, promoted to `undo` if anything changed
+let touched = false;  // did this turn modify the log?
+
+const TOOL_IMPL = {
+  log_items: applyLogItems,
+  edit_items: applyEditItems,
+  delete_items: applyDeleteItems
+};
+
+function renderUndo() {
+  const bar = $('undobar');
+  bar.hidden = !(undo && undo.dayId === day().id);
+}
+
+function doUndo() {
+  if (!undo || undo.dayId !== day().id) return;
+  day().items = undo.items;
+  day().chat.push({ role: 'did', text: '↩ change undone' });
+  undo = null;
+  editingId = null;
+  save();
+  render();
+}
+
+// History is stored as plain {role, text} for display and replay. Tool
+// round-trips happen inside one send and are not persisted — the model gets
+// the current log via stateBlock() instead, so it never works from a stale
+// snapshot of what was logged.
+function buildMessages() {
+  // 'did' entries are display-only receipts — never sent, they aren't valid roles.
+  // 8 is deliberate. stateBlock() already carries the whole current log, so
+  // history is only needed to resolve "the other one" style references across
+  // a couple of turns. Sending more just re-pays for facts already in state.
+  const msgs = day().chat
+    .filter(m => m.role === 'user' || m.role === 'assistant')
+    .slice(-8)
+    .map(m => ({ role: m.role, content: m.text }));
+  const last = msgs[msgs.length - 1];
+  if (last && last.role === 'user') last.content = stateBlock() + '\n\n' + last.content;
+  return msgs;
+}
+
+async function send() {
+  if (busy) return;
+  const text = $('say').value.trim();
+  if (!text) return;
+  if (!serverMode && !apiKey) { showMsg('Add your Anthropic API key under Settings first.'); return; }
+
+  day().chat.push({ role: 'user', text });
+  $('say').value = '';
+  $('say').style.height = 'auto';
+  showMsg('');
+  busy = true;
+  undoSnap = null;
+  touched = false;
+  save();
+  renderChat();
+
+  try {
+    const msgs = buildMessages();
+
+    // Tool-use loop: model may log, then speak. Two hops is enough for
+    // log-then-confirm; the cap stops any runaway.
+    for (let hop = 0; hop < 3; hop++) {
+      const norm = normalize(await callApi(msgs));
+
+      // Presence of tool calls drives the loop, not stop_reason — the two
+      // formats spell that field differently and some models omit it.
+      if (norm.calls.length) {
+        const results = [];
+        for (const call of norm.calls) {
+          const run = TOOL_IMPL[call.name];
+          if (!run) {
+            results.push({ id: call.id, content: 'Unknown tool.', isError: true });
+            continue;
+          }
+          // Snapshot before the first mutation of this turn, so Undo can restore it.
+          if (!undoSnap) undoSnap = { dayId: day().id, items: JSON.parse(JSON.stringify(day().items)) };
+          const out = run(call.input);
+          if (out.receipts.length) day().chat.push({ role: 'did', text: out.receipts.join('\n') });
+          if (out.changed) touched = true;
+          results.push({ id: call.id, content: out.result });
+        }
+        pushToolTurn(msgs, norm, results);
+        save();
+        renderTotals(); renderList(); renderChat();
+        continue;
+      }
+
+      day().chat.push({ role: 'assistant', text: norm.text || 'Done.' });
+      break;
+    }
+  } catch (e) {
+    const m = String(e && e.message || e);
+    showMsg(/Failed to fetch|NetworkError/i.test(m)
+      ? 'Could not reach the API. Check your connection and that the key is valid.'
+      : m);
+  } finally {
+    busy = false;
+    if (touched && undoSnap) undo = undoSnap;
+    undoSnap = null;
+    editingId = null;
+    save();
+    render();
+    $('say').focus();
+  }
+}
+
+function onListClick(e) {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const row = btn.closest('.row');
+  const id = row && row.dataset.id;
+  if (!id) return;
+  const act = btn.dataset.act;
+
+  if (act === 'edit') { editingId = id; renderList(); return; }
+  if (act === 'cancel') { editingId = null; renderList(); return; }
+
+  if (act === 'del') {
+    day().items = day().items.filter(i => i.id !== id);
+    if (editingId === id) editingId = null;
+    save(); render(); return;
+  }
+
+  if (act === 'save') {
+    const it = day().items.find(i => i.id === id);
+    if (!it) return;
+    const get = k => row.querySelector(`[data-e="${k}"]`);
+    it.name = (get('name').value.trim() || it.name).slice(0, 120);
+    it.cal = clamp0(r0(get('cal').value));
+    it.p = clamp0(r1(get('p').value));
+    it.f = clamp0(r1(get('f').value));
+    it.c = clamp0(r1(get('c').value));
+    it.zn = clamp0(r1(get('zn').value));
+    it.fe = clamp0(r1(get('fe').value));
+    it.mg = clamp0(r0(get('mg').value));
+    it.vc = clamp0(r1(get('vc').value));
+    it.meal = get('meal').value;
+    editingId = null;
+    save(); render();
+  }
+}
+
+/* ============================================================
+   Boot
+   ============================================================ */
+(async function init() {
+  await load();
+  serverMode = await detectServer();
+
+  // A hosted copy is passphrase-locked. Nothing else runs until it is answered:
+  // the log has not been fetched yet, so there is nothing to show behind it.
+  if (needsPass) {
+    await forgetPass();
+    await askForPass();
+    serverMode = await detectServer();
+  }
+
+  // Adopt the shared log before the first paint, so a device that has never
+  // seen this data does not flash an empty day at you.
+  const sync = await pullState();
+  if (sync.ok) {
+    if (dirty) pushState();
+    startSyncLoop();
+  }
+
+  if (serverMode) {
+    $('keyRow').hidden = true;
+    $('keyNote').hidden = false;
+    $('keyNote').textContent =
+      `Using ${providerName} · ${MODEL}. The key comes from .env via server.js and stays on that machine. ` +
+      'Change AI_PROVIDER in .env and restart to switch backends.';
+  } else {
+    $('key').value = apiKey;
+    $('key').placeholder = format === 'anthropic' ? 'Anthropic API key (sk-ant-…)' : 'NVIDIA API key (nvapi-…)';
+  }
+
+  if (sync.ok) {
+    const note = $('keyNote');
+    note.textContent = (note.hidden ? '' : note.textContent + ' ') +
+      'Your log is kept by server.js, so every device on this Wi-Fi sees the same days.';
+    note.hidden = false;
+  }
+  render();
+
+  $('daySel').addEventListener('change', e => {
+    state.active = Number(e.target.value);
+    editingId = null;
+    save(); render();
+  });
+
+  $('newDay').addEventListener('click', () => {
+    state.days.push(newDay(state.days.length + 1));
+    state.active = state.days.length - 1;
+    editingId = null;
+    showMsg('');
+    save(); render();
+  });
+
+  const say = $('say');
+  $('send').addEventListener('click', send);
+  $('undoBtn').addEventListener('click', doUndo);
+  say.addEventListener('keydown', e => {
+    // Enter sends, Shift+Enter makes a newline.
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  say.addEventListener('input', () => {
+    say.style.height = 'auto';
+    say.style.height = Math.min(say.scrollHeight, 130) + 'px';
+  });
+
+  $('list').addEventListener('click', onListClick);
+
+  $('saveKey').addEventListener('click', async () => {
+    apiKey = $('key').value.trim();
+    await window.storage.setItem(K_KEY, apiKey);
+    showMsg(apiKey ? 'Key saved.' : 'Key cleared.', true);
+  });
+
+  $('reset').addEventListener('click', async () => {
+    if (!confirm('Delete every logged day, on every device? Your API key is kept.')) return;
+    state = freshState();
+    editingId = null;
+    dirty = true;
+    await saveLocal();
+    // Forced: wiping is the point here, so a revision mismatch must not merge
+    // the old days back in.
+    await pushState({ force: true });
+    showMsg('');
+    render();
+  });
+})();
+</script>
+</body>
+</html>

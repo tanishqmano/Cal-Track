@@ -1,0 +1,16 @@
+{
+  "name": "macro-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plain-language food logger. One HTML page, one Node server, no build step.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "mongodb": "^7.5.0"
+  }
+}

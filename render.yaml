@@ -1,0 +1,35 @@
+# Render blueprint. With this file in the repo, Render can create the service
+# without you filling in a form: New -> Blueprint -> pick the repo.
+#
+# Secrets are deliberately not in here. `sync: false` means "ask me in the
+# dashboard", so no key, connection string or passphrase is ever committed.
+services:
+  - type: web
+    name: macro-tracker
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+
+    # Cheap and unauthenticated, so it is safe to poll and it never wakes the
+    # database. Render uses it to tell a live instance from a broken one.
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: AI_PROVIDER
+        value: anthropic
+
+      # Without this the log falls back to a file on Render's disk, which is
+      # wiped on every deploy and every restart. Set it.
+      - key: MONGODB_URI
+        sync: false
+
+      # Leave this unset and the app is open to anyone who finds the URL,
+      # including your API key by way of /api/parse.
+      - key: PASSPHRASE
+        sync: false
+
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        sync: false
