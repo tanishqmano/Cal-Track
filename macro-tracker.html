@@ -222,6 +222,26 @@
   .fine{font-size:11.5px;color:var(--faint);margin-top:8px;line-height:1.5}
   .danger{color:var(--warn);border-color:var(--warn)}
 
+  /* ---- target editor ---- */
+  .tgt-head{
+    font-size:12px;font-weight:640;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted);margin:14px 0 9px;padding-top:13px;border-top:1px solid var(--border);
+  }
+  /* Same 2x2-then-one-row shape as the micronutrient strip: eight boxes side by
+     side is unreadable on a phone. Label above the box, so a narrow column
+     never squeezes the number. */
+  .tgts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+  @media (min-width:520px){ .tgts{grid-template-columns:repeat(4,minmax(0,1fr))} }
+  .tgt{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .tgt label{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tgt .in{display:flex;align-items:center;gap:5px}
+  .tgt input{
+    flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:8px;padding:7px 8px;font-size:13.5px;
+    font-variant-numeric:tabular-nums;text-align:right;
+  }
+  .tgt .u{font-size:11.5px;color:var(--faint)}
+
   /* ---- passphrase gate ---- */
   /* Covers the page rather than sitting in it: with no passphrase there is no
      log to show, so a half-rendered empty tracker would only mislead. */
@@ -256,6 +276,7 @@
 <header>
   <h1>Macros</h1>
   <select id="daySel" aria-label="Day"></select>
+  <button class="btn ghost" id="delDay" aria-label="Delete this day" title="Delete this day">✕</button>
   <button class="btn" id="newDay">+ Day</button>
 </header>
 
@@ -284,12 +305,22 @@
       <button class="btn" id="saveKey">Save</button>
     </div>
     <div class="fine" id="keyNote" hidden></div>
+
+    <div class="tgt-head">Daily targets</div>
+    <div class="tgts" id="tgts"></div>
+    <div class="setrow">
+      <button class="btn primary" id="saveTargets">Save targets</button>
+      <button class="btn" id="defTargets">Restore defaults</button>
+    </div>
+    <div class="fine" id="tgtNote">
+      Targets travel with the log, so every device sees the same ones, and the assistant is told about them on every message.
+    </div>
+
     <div class="fine">
-      Targets: 2150 kcal · 110 g protein · 65 g fat · 280 g carbs · 17 mg zinc · 19 mg iron · 440 mg magnesium · 80 mg vitamin C.
       Protein counts only from complete sources (whey, milk, egg, chicken, mutton, fish, paneer, curd, yogurt).
       Everything else is logged at 0 protein — calories, fat and carbs still count.
       Micronutrients are the exception: they count from every food, plants included.
-      Targets are ICMR-NIN 2020 for an Indian adult man; the minerals sit above US RDAs because phytate in rice and dal blocks absorption.
+      The default targets are ICMR-NIN 2020 for an Indian adult man; the minerals sit above US RDAs because phytate in rice and dal blocks absorption.
       Vitamin C is logged after cooking loss — a boiled or simmered vegetable keeps under half of what it started with, so sambar and kootu count for far less than the raw weight suggests.
     </div>
     <div class="setrow">
@@ -355,13 +386,34 @@
 // rice/dal/millet diet is high in phytate, which blocks zinc and iron
 // absorption, so the intake needed to absorb enough is larger.
 // Adult woman: zn 13.2, fe 29, mg 370, vc 80.
-const TARGETS = { cal: 2150, p: 110, f: 65, c: 280, zn: 17, fe: 19, mg: 440, vc: 80 };
+const DEFAULT_TARGETS = { cal: 2150, p: 110, f: 65, c: 280, zn: 17, fe: 19, mg: 440, vc: 80 };
+
+// The targets in force right now. Editable under Settings, and kept inside the
+// log rather than beside it, so changing them on the phone changes them on the
+// laptop too. normalizeState() rebinds this to state.targets on every copy that
+// arrives; nothing else should reassign it.
+let TARGETS = Object.assign({}, DEFAULT_TARGETS);
+
 const MICROS  = [
   { k: 'zn', name: 'Zinc',      unit: 'mg' },
   { k: 'fe', name: 'Iron',      unit: 'mg' },
   { k: 'mg', name: 'Magnesium', unit: 'mg' },
   { k: 'vc', name: 'Vitamin C', unit: 'mg' }
 ];
+
+// One row per editable target. `dec` marks the ones worth a decimal place —
+// 17.5 mg of zinc is a real setting, 2150.5 kcal is not.
+const TARGET_FIELDS = [
+  { k: 'cal', name: 'Calories', unit: 'kcal', step: 10, dec: false },
+  { k: 'p',   name: 'Protein',  unit: 'g',    step: 5,  dec: false },
+  { k: 'f',   name: 'Fat',      unit: 'g',    step: 5,  dec: false },
+  { k: 'c',   name: 'Carbs',    unit: 'g',    step: 5,  dec: false }
+].concat(MICROS.map(m => ({
+  k: m.k, name: m.name, unit: m.unit,
+  step: m.k === 'mg' ? 10 : 1,
+  dec: m.k !== 'mg'
+})));
+
 const MEALS   = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
 // Wire format. 'openai' covers NVIDIA NIM, OpenRouter, Together, vLLM and
 // OpenAI; 'anthropic' is the Claude Messages API. When served by server.js
@@ -435,7 +487,9 @@ ARITHMETIC CHECK — do this before returning, every time
 2. Scaling check. For every micronutrient you took from the reference table, restate the multiplication in the form (table value) x (grams / 100) and confirm the result you are about to send matches it. Losing or adding a factor of 10 here is the most common mistake. 100 g of a food must give exactly the table value, 150 g must give 1.5x it, 30 g must give 0.3x it.
 3. Magnitude check. Magnesium for a normal portion of a magnesium-rich food is tens to hundreds of mg, not single digits. Zinc and iron for a normal portion are usually under 10 mg. If a number looks an order of magnitude off for the food and the portion, you have slipped a decimal — recompute it.`;
 
-const CHAT_SYSTEM = `You are the assistant inside a personal macro tracker. The user is cutting for fat loss on 2150 kcal, 110 g protein, 65 g fat and 280 g carbs a day. They also track four micronutrients: 17 mg zinc, 19 mg iron, 440 mg magnesium, 80 mg vitamin C.
+// Built per request, not once: the targets are the user's to change, and a
+// prompt still quoting yesterday's numbers would argue with the log it is shown.
+const chatSystem = () => `You are the assistant inside a personal macro tracker. The user's daily targets are ${TARGETS.cal} kcal, ${TARGETS.p} g protein, ${TARGETS.f} g fat and ${TARGETS.c} g carbs. They also track four micronutrients: ${TARGETS.zn} mg zinc, ${TARGETS.fe} mg iron, ${TARGETS.mg} mg magnesium, ${TARGETS.vc} mg vitamin C. The user sets these numbers themselves — use them, never ones you remember from elsewhere.
 
 Every turn you receive a <current_log> block holding their targets, running totals and everything logged today. Read it. Never ask for something already in it.
 
@@ -462,7 +516,7 @@ REPLIES
 - Minerals are the opposite: plant foods are the best answer there. For zinc suggest pumpkin seeds, cashews, mutton, egg, curd. For iron suggest greens and keerai, dal, rajma, sesame, jaggery, mutton, liver. For magnesium suggest pumpkin seeds, almonds, dark chocolate, millets, spinach, banana. For vitamin C suggest amla, guava, orange, sweet lime, capsicum, and raw or barely cooked vegetables.
 - Vitamin C and iron work together: vitamin C roughly doubles absorption of plant iron, so tell the user to eat them in the SAME meal. Squeezing lemon over the food after it is off the heat is the cheapest way to do it, since heat is what destroys vitamin C. Also say to keep tea or coffee an hour away from an iron-heavy meal.
 - If the user is short on vitamin C, prefer a raw fix over cooking something new. Sambar and kootu keep well under half of what went in.
-- The user is in a deficit. If they are near or over on calories, say so plainly rather than encouraging more food. When they are short on a mineral but out of calories, name the densest option for the fewest calories rather than telling them to eat more in general.
+- Treat the calorie target as a ceiling. If they are near or over on calories, say so plainly rather than encouraging more food. When they are short on a mineral but out of calories, name the densest option for the fewest calories rather than telling them to eat more in general.
 
 ${SYSTEM}`;
 
@@ -703,9 +757,28 @@ async function detectServer() {
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const newDay = n => ({ id: uid(), label: 'Day ' + n, items: [], chat: [] });
-const freshState = () => ({ v: 1, active: 0, days: [newDay(1)] });
+
+// Targets carry over a reset — they are a setting, not logged data. targetsAt
+// is only read when two devices disagree; see mergeState().
+const freshState = () => ({
+  v: 1, active: 0,
+  targets: Object.assign({}, TARGETS),
+  targetsAt: (state && state.targetsAt) || 0,
+  days: [newDay(1)]
+});
 
 function day() { return state.days[state.active]; }
+
+// Days are numbered by the highest number already in use, not by how many exist,
+// so deleting Day 2 of three does not make the next one a second Day 3.
+function nextDayNum() {
+  let n = 0;
+  for (const d of state.days) {
+    const m = /(\d+)\s*$/.exec(String(d.label || ''));
+    if (m) n = Math.max(n, Number(m[1]));
+  }
+  return n + 1;
+}
 
 // Repair anything the log is missing: days saved before chat existed, and
 // items logged before micros were tracked — those read as 0 rather than
@@ -713,6 +786,19 @@ function day() { return state.days[state.active]; }
 function normalizeState() {
   if (!state || !Array.isArray(state.days) || !state.days.length) state = freshState();
   if (state.active >= state.days.length || state.active < 0) state.active = state.days.length - 1;
+
+  // Targets live in the log, so a copy written before they were editable — or
+  // one hand-edited to nonsense — falls back to the default field by field.
+  // TARGETS then points at the live object, which is what makes an edit here
+  // show up everywhere the numbers are read.
+  if (!state.targets || typeof state.targets !== 'object') state.targets = {};
+  for (const f of TARGET_FIELDS) {
+    const v = Number(state.targets[f.k]);
+    state.targets[f.k] = Number.isFinite(v) && v > 0 ? v : DEFAULT_TARGETS[f.k];
+  }
+  TARGETS = state.targets;
+  if (typeof state.targetsAt !== 'number') state.targetsAt = 0;
+
   for (const d of state.days) {
     if (!Array.isArray(d.items)) d.items = [];
     if (!Array.isArray(d.chat)) d.chat = [];
@@ -801,7 +887,11 @@ function mergeState(mine, theirs) {
   }
   for (const b of remote.values()) days.push(b);
 
-  return { v: 1, active: mine.active, days };
+  // Targets are one small object, not a list, so there is nothing to fold
+  // together field by field: whichever side set them last wins outright.
+  const newer = (Number(theirs.targetsAt) || 0) > (Number(mine.targetsAt) || 0) ? theirs : mine;
+
+  return { v: 1, active: mine.active, targets: newer.targets, targetsAt: newer.targetsAt || 0, days };
 }
 
 // Returns { ok, changed } — ok false simply means the page is running without a
@@ -1096,12 +1186,35 @@ function renderChat() {
   el.scrollTop = el.scrollHeight;
 }
 
+// Boxes are built once and then only refilled, so the fields keep their place
+// while Settings is open.
+function renderTargets() {
+  const box = $('tgts');
+  if (!box.children.length) {
+    box.innerHTML = TARGET_FIELDS.map(f => `
+      <div class="tgt">
+        <label for="t_${f.k}">${f.name}</label>
+        <div class="in">
+          <input id="t_${f.k}" type="number" min="1" step="${f.step}" inputmode="decimal">
+          <span class="u">${f.unit}</span>
+        </div>
+      </div>`).join('');
+  }
+  for (const f of TARGET_FIELDS) {
+    const el = $('t_' + f.k);
+    // render() also runs when another device syncs. Never rewrite the box
+    // someone is halfway through typing into.
+    if (el !== document.activeElement) el.value = TARGETS[f.k];
+  }
+}
+
 function render() {
   renderDays();
   renderTotals();
   renderList();
   renderChat();
   renderUndo();
+  renderTargets();
 }
 
 function showMsg(text, info) {
@@ -1279,7 +1392,7 @@ function buildPayload(messages) {
       model: MODEL,
       max_tokens: 1500,
       thinking: { type: 'disabled' },
-      system: [{ type: 'text', text: CHAT_SYSTEM, cache_control: { type: 'ephemeral' } }],
+      system: [{ type: 'text', text: chatSystem(), cache_control: { type: 'ephemeral' } }],
       tools: TOOLS,
       messages
     };
@@ -1293,7 +1406,7 @@ function buildPayload(messages) {
     top_p: 0.9,
     // Nemotron toggles its reasoning trace off with this exact phrase. Other
     // OpenAI-compatible models ignore the line harmlessly.
-    messages: [{ role: 'system', content: 'detailed thinking off\n\n' + CHAT_SYSTEM }].concat(messages),
+    messages: [{ role: 'system', content: 'detailed thinking off\n\n' + chatSystem() }].concat(messages),
     tools: OPENAI_TOOLS,
     tool_choice: 'auto'
   };
@@ -1492,6 +1605,26 @@ async function send() {
   }
 }
 
+function deleteDay() {
+  const d = day();
+  const what = d.items.length ? `${d.label} and the ${d.items.length} item(s) in it` : d.label;
+  if (!confirm(`Delete ${what}? This removes it from every device.`)) return;
+
+  const idx = state.active;
+  state.days.splice(idx, 1);
+  // A tracker with no days has nothing to draw, so deleting the last one leaves
+  // an empty day standing rather than an empty page.
+  if (!state.days.length) state.days.push(newDay(1));
+  // Land on the day that took its place, or the new last one if it was the tail.
+  state.active = Math.min(idx, state.days.length - 1);
+
+  // Undo restores items into a day by id; that day is gone.
+  if (undo && undo.dayId === d.id) undo = null;
+  editingId = null;
+  showMsg('');
+  save(); render();
+}
+
 function onListClick(e) {
   const btn = e.target.closest('button[data-act]');
   if (!btn) return;
@@ -1577,11 +1710,39 @@ function onListClick(e) {
   });
 
   $('newDay').addEventListener('click', () => {
-    state.days.push(newDay(state.days.length + 1));
+    state.days.push(newDay(nextDayNum()));
     state.active = state.days.length - 1;
     editingId = null;
     showMsg('');
     save(); render();
+  });
+
+  $('delDay').addEventListener('click', deleteDay);
+
+  $('saveTargets').addEventListener('click', () => {
+    const next = {}, kept = [];
+    for (const f of TARGET_FIELDS) {
+      const v = Number($('t_' + f.k).value);
+      // A target of zero would divide by zero in the bars and tell the model the
+      // user needs nothing. Refuse it and say which box was ignored.
+      if (!Number.isFinite(v) || v <= 0) { next[f.k] = TARGETS[f.k]; kept.push(f.name); continue; }
+      next[f.k] = f.dec ? r1(v) : r0(v);
+    }
+    state.targets = next;
+    state.targetsAt = Date.now();
+    normalizeState();
+    save(); render();
+    $('tgtNote').textContent = kept.length
+      ? `Saved. ${kept.join(', ')} must be greater than zero, so the previous value was kept.`
+      : 'Saved. Every device and the assistant now use these.';
+  });
+
+  $('defTargets').addEventListener('click', () => {
+    state.targets = Object.assign({}, DEFAULT_TARGETS);
+    state.targetsAt = Date.now();
+    normalizeState();
+    save(); render();
+    $('tgtNote').textContent = 'Back to the ICMR-NIN defaults.';
   });
 
   const say = $('say');
@@ -1605,8 +1766,11 @@ function onListClick(e) {
   });
 
   $('reset').addEventListener('click', async () => {
-    if (!confirm('Delete every logged day, on every device? Your API key is kept.')) return;
+    if (!confirm('Delete every logged day, on every device? Your targets and API key are kept.')) return;
     state = freshState();
+    // Rebinds TARGETS onto the new state object — without it, later target edits
+    // would be written into the log that was just thrown away.
+    normalizeState();
     editingId = null;
     dirty = true;
     await saveLocal();
