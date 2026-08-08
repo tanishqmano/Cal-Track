@@ -408,6 +408,33 @@ async function getState(res) {
   }
 }
 
+/* ---------- token meter ----------
+
+   Every reply carries a usage block that the page discards. Adding it up here
+   is the only spend figure available without logging into a dashboard, and on
+   a free tier the tokens are the thing that runs out first.
+
+   Counts reset when the process does — this answers "what is this costing me",
+   not "what have I used this month". Google's own page is the record. */
+
+const meter = { calls: 0, input: 0, output: 0, total: 0 };
+
+function meterAdd(text) {
+  let u;
+  try { u = (JSON.parse(text) || {}).usage; } catch { return null; }
+  if (!u) return null;                       // an error body, or a shape we don't know
+  const input = u.prompt_tokens || u.input_tokens || 0;
+  const output = u.completion_tokens || u.output_tokens || 0;
+  // Gemini bills thinking tokens that appear in neither count, so `total` is
+  // the honest number and is usually larger than input + output.
+  const total = u.total_tokens || input + output;
+  meter.calls += 1;
+  meter.input += input;
+  meter.output += output;
+  meter.total += total;
+  return { input, output, total };
+}
+
 async function parseFood(req, res) {
   if (!API_KEY) {
     return json(res, 503, { error: { message: `No key for provider "${PROVIDER_NAME}" in .env` } });
@@ -444,9 +471,23 @@ async function parseFood(req, res) {
     return json(res, 502, { error: { message: `Could not reach ${PROVIDER_NAME}: ` + e.message } });
   }
 
+  const used = meterAdd(text);
+  if (used) {
+    const think = used.total - used.input - used.output;
+    console.log(
+      '  tokens  +' + used.total + '  (in ' + used.input + ', out ' + used.output +
+      (think > 0 ? ', thinking ' + think : '') + ')' +
+      '   session ' + meter.total + ' over ' + meter.calls + ' calls'
+    );
+  }
+
   res.writeHead(upstream.status, {
     'content-type': 'application/json; charset=utf-8',
-    'cache-control': 'no-store'
+    'cache-control': 'no-store',
+    // Says "this answer is the provider's, not ours". The page needs the
+    // difference: a 429 from upstream is a quota to wait out, while a 429 from
+    // the gate above means a wrong passphrase and must never be retried.
+    'x-upstream': '1'
   });
   res.end(text);
 }
@@ -478,7 +519,10 @@ const server = http.createServer((req, res) => {
       store: store === mongoStore ? 'mongo' : 'file',
       provider: PROVIDER_NAME,
       format: P.format,
-      model: P.model
+      model: P.model,
+      // Readable from a phone, so the running cost can be checked from
+      // whatever device is in your hand.
+      tokens: meter
     });
   }
 
