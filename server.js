@@ -5,12 +5,12 @@
  * Local server for the macro tracker.
  *
  *   - Serves macro-tracker.html
- *   - Reads ANTHROPIC_API_KEY from .env and injects it into API calls
+ *   - Reads the selected provider's API key from .env and injects it into calls
  *   - Holds the food log so every device shares one copy, in a JSON file or in
  *     MongoDB depending on STORE in .env
  *
  * The key never reaches the browser. The page posts to /api/parse on its own
- * origin; this process adds the auth header and forwards to Anthropic.
+ * origin; this process adds the auth header and forwards it upstream.
  *
  * Run with:  node server.js
  */
@@ -90,13 +90,25 @@ const PROVIDERS = {
   nvidia: {
     format: 'openai',
     url: (pick('NVIDIA_BASE_URL') || 'https://integrate.api.nvidia.com/v1').replace(/\/$/, '') + '/chat/completions',
+    keyName: 'NVIDIA_API_KEY',
     key: pick('NVIDIA_API_KEY'),
     model: pick('NVIDIA_MODEL') || 'nvidia/llama-3.3-nemotron-super-49b-v1',
+    headers: k => ({ authorization: 'Bearer ' + k })
+  },
+  // Google publishes an OpenAI-compatible front door for Gemini, so it rides
+  // the same wire format as the others — no third adapter in the page.
+  gemini: {
+    format: 'openai',
+    url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+    keyName: 'GEMINI_API_KEY',
+    key: pick('GEMINI_API_KEY'),
+    model: pick('GEMINI_MODEL') || 'gemini-3.5-flash-lite',
     headers: k => ({ authorization: 'Bearer ' + k })
   },
   anthropic: {
     format: 'anthropic',
     url: 'https://api.anthropic.com/v1/messages',
+    keyName: 'ANTHROPIC_API_KEY',
     key: pick('ANTHROPIC_API_KEY'),
     model: pick('ANTHROPIC_MODEL') || 'claude-sonnet-4-6',
     headers: k => ({ 'x-api-key': k, 'anthropic-version': '2023-06-01' })
@@ -268,7 +280,7 @@ async function importFileLog() {
 
    On a home network the audience is whoever is in the house, and no passphrase
    is needed. On a public host the audience is everyone, and /api/parse is the
-   part that matters: it spends the Anthropic key on behalf of whoever calls it.
+   part that matters: it spends your API key on behalf of whoever calls it.
    Setting PASSPHRASE in .env closes both the log and the proxy to strangers.
 
    The page itself stays open — it holds no data, and you need it in front of
@@ -528,8 +540,7 @@ server.listen(PORT, HOST, async () => {
   if (API_KEY) {
     console.log('  API key:   loaded from .env (' + API_KEY.slice(0, 11) + '…) — stays on this machine');
   } else {
-    const want = PROVIDER_NAME === 'nvidia' ? 'NVIDIA_API_KEY' : 'ANTHROPIC_API_KEY';
-    console.log('  API key:   MISSING. Add ' + want + ' to .env, then restart.');
+    console.log('  API key:   MISSING. Add ' + P.keyName + ' to .env, then restart.');
   }
   if (PASS_HASH) {
     console.log('  Access:    passphrase required for the log and the API proxy');

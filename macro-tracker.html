@@ -301,7 +301,7 @@
   <summary>Settings</summary>
   <div class="card">
     <div class="setrow" id="keyRow">
-      <input type="password" id="key" placeholder="Anthropic API key (sk-ant-…)" autocomplete="off" spellcheck="false">
+      <input type="password" id="key" placeholder="API key" autocomplete="off" spellcheck="false">
       <button class="btn" id="saveKey">Save</button>
     </div>
     <div class="fine" id="keyNote" hidden></div>
@@ -637,6 +637,14 @@ let editingId = null;
 let serverMode = false;
 
 let providerName = 'nvidia';
+
+// Direct mode only: which key the box under Settings is asking for. Keyed by
+// the provider /api/health reports, so the hint follows .env.
+const KEY_HINT = {
+  nvidia: 'NVIDIA API key (nvapi-…)',
+  gemini: 'Gemini API key (AIza…)',
+  anthropic: 'Anthropic API key (sk-ant-…)'
+};
 
 /* ============================================================
    Access
@@ -1485,6 +1493,10 @@ async function callApi(messages) {
   let data = null;
   try { data = await res.json(); } catch (e) { /* fall through */ }
 
+  // Gemini returns errors as a one-element array rather than an object. Unwrap
+  // it, or the reason gets swallowed and the user is told only "HTTP 404".
+  if (Array.isArray(data)) data = data[0] || null;
+
   if (!res.ok || (data && data.type === 'error')) {
     const err = data && data.error;
     throw new Error((err && (err.message || err)) || ('HTTP ' + res.status));
@@ -1543,7 +1555,7 @@ async function send() {
   if (busy) return;
   const text = $('say').value.trim();
   if (!text) return;
-  if (!serverMode && !apiKey) { showMsg('Add your Anthropic API key under Settings first.'); return; }
+  if (!serverMode && !apiKey) { showMsg('Add your API key under Settings first.'); return; }
 
   day().chat.push({ role: 'user', text });
   $('say').value = '';
@@ -1692,7 +1704,7 @@ function onListClick(e) {
       'Change AI_PROVIDER in .env and restart to switch backends.';
   } else {
     $('key').value = apiKey;
-    $('key').placeholder = format === 'anthropic' ? 'Anthropic API key (sk-ant-…)' : 'NVIDIA API key (nvapi-…)';
+    $('key').placeholder = KEY_HINT[providerName] || 'API key';
   }
 
   if (sync.ok) {

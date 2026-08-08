@@ -17,7 +17,7 @@ services:
 
     envVars:
       - key: AI_PROVIDER
-        value: anthropic
+        value: gemini
 
       # Without this the log falls back to a file on Render's disk, which is
       # wiped on every deploy and every restart. Set it.
@@ -29,7 +29,7 @@ services:
       - key: PASSPHRASE
         sync: false
 
-      - key: ANTHROPIC_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
-      - key: ANTHROPIC_MODEL
+      - key: GEMINI_MODEL
         sync: false

@@ -46,7 +46,7 @@ behaves exactly as before, it just keeps the log somewhere else.
 ## 2. Set a passphrase
 
 Skipping this puts your food log **and your API key** in reach of anyone who
-finds the URL. `/api/parse` spends your Anthropic key for whoever calls it, so
+finds the URL. `/api/parse` spends your API key for whoever calls it, so
 an open instance is a bill waiting to happen.
 
 ```
@@ -84,8 +84,8 @@ Then on <https://render.com>:
 1. **New → Blueprint**, pick the repo. `render.yaml` fills in the build and
    start commands.
 2. Render asks for the values marked `sync: false`. Paste in:
-   - `ANTHROPIC_API_KEY`
-   - `ANTHROPIC_MODEL` (whatever your `.env` uses)
+   - `GEMINI_API_KEY`
+   - `GEMINI_MODEL` (whatever your `.env` uses)
    - `MONGODB_URI`
    - `PASSPHRASE`
 3. Deploy. You get a URL like `https://macro-tracker-xxxx.onrender.com`.

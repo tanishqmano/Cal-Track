@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check server.js)",
+      "Bash(GEMINI_API_KEY=AIzaSyTESTKEY PORT=8799 node server.js)",
+      "Bash(curl -s -H \"x-passphrase: purple otter breakfast\" http://localhost:8799/api/health)",
+      "Bash(kill %1)",
+      "Bash(PORT=8799 node server.js)",
+      "Bash(curl -s -H 'x-macro-pass: purple otter breakfast' http://localhost:8799/api/health)",
+      "Bash(curl -s -X POST http://localhost:8799/api/parse -H 'x-macro-pass: purple otter breakfast' -H 'content-type: application/json' -d '{\"max_tokens\":1500,\"temperature\":0.2,\"top_p\":0.9,\"messages\":[{\"role\":\"system\",\"content\":\"Estimate macros. Use the log_items tool.\"},{\"role\":\"user\",\"content\":\"232g of fried rice, homemade, and 48g mushroom grill\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"log_items\",\"description\":\"Log food items\",\"parameters\":{\"type\":\"object\",\"properties\":{\"items\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"},\"kcal\":{\"type\":\"number\"},\"protein\":{\"type\":\"number\"}},\"required\":[\"name\",\"kcal\"]}}},\"required\":[\"items\"]}}}],\"tool_choice\":\"auto\"}')",
+      "Bash(xargs kill -9)",
+      "Bash(xargs -r kill)",
+      "Bash(node server.js)"
+    ]
+  }
+}
