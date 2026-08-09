@@ -1,0 +1,42 @@
+/* The card at the top: four macro bars, a micronutrient strip, and the notes
+   underneath them. */
+
+.stat{margin-bottom:13px}
+.stat:last-child{margin-bottom:0}
+.stat-top{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+.stat-name{font-size:13px;font-weight:560;flex:1}
+.stat-val{font-size:13px}
+.stat-val b{font-weight:620}
+.stat-val span{color:var(--faint)}
+.stat-left{font-size:12px;color:var(--muted);white-space:nowrap}
+.stat-left.over{color:var(--warn);font-weight:560}
+.bar{height:6px;background:var(--surface-2);border:1px solid var(--border);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .18s ease}
+.bar i.over{background:var(--warn)}
+
+/* ---- micronutrient strip ---- */
+/* 2x2 on a phone, one row once there is width for it */
+.micros{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px;
+  margin-top:14px;padding-top:13px;border-top:1px solid var(--border);
+}
+@media (min-width:520px){ .micros{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px} }
+.ms-top{display:flex;align-items:baseline;gap:4px;margin-bottom:5px}
+.ms-name{font-size:12px;font-weight:560;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ms-top .num{font-size:12px;white-space:nowrap}
+.ms-top b{font-weight:620}
+.ms-t{color:var(--faint)}
+.micros .bar i{background:var(--muted)}
+.micros .bar i.done{background:var(--accent)}
+@media (max-width:379px){
+  .ms-name{font-size:11.5px}
+  .micros{gap:10px}
+}
+
+/* ---- notes ---- */
+.notes{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.note{
+  font-size:12px;padding:5px 9px;border-radius:99px;
+  background:var(--accent-soft);color:var(--accent);
+}
+.note.warn{background:var(--warn-soft);color:var(--warn)}

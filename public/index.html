@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Macros</title>
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/totals.css">
+<link rel="stylesheet" href="/css/log.css">
+<link rel="stylesheet" href="/css/chat.css">
+<link rel="stylesheet" href="/css/settings.css">
+</head>
+<body>
+
+<!-- Structure only. Everything with an id is filled in by js/ui/*. -->
+
+<div class="gate" id="gate" hidden>
+  <div class="gate-box">
+    <h2>Macros</h2>
+    <p id="gateNote">This tracker is private. Enter the passphrase to open it.</p>
+    <input type="password" id="gatePass" placeholder="Passphrase" autocomplete="current-password"
+           spellcheck="false" enterkeyhint="go">
+    <button class="btn primary" id="gateGo">Open</button>
+    <div class="msg" id="gateMsg" hidden></div>
+  </div>
+</div>
+
+<header>
+  <h1>Macros</h1>
+  <select id="daySel" aria-label="Day"></select>
+  <button class="btn ghost" id="delDay" aria-label="Delete this day" title="Delete this day">✕</button>
+  <button class="btn" id="newDay">+ Day</button>
+</header>
+
+<div class="card" id="totals"></div>
+
+<div class="card" id="list"></div>
+
+<div class="card chat">
+  <div class="transcript" id="transcript" aria-live="polite"></div>
+  <div class="msg" id="msg" hidden></div>
+  <div class="undobar" id="undobar" hidden>
+    <span id="undoNote">Your log was changed.</span>
+    <button class="btn" id="undoBtn">Undo</button>
+  </div>
+  <div class="inputbar">
+    <textarea id="say" rows="1" placeholder="What did you eat? Or ask me anything."></textarea>
+    <button class="btn primary send" id="send" aria-label="Send">↑</button>
+  </div>
+</div>
+
+<details>
+  <summary>Settings</summary>
+  <div class="card">
+    <div class="setrow" id="keyRow">
+      <input type="password" id="key" placeholder="API key" autocomplete="off" spellcheck="false">
+      <button class="btn" id="saveKey">Save</button>
+    </div>
+    <div class="fine" id="keyNote" hidden></div>
+
+    <div class="tgt-head">Daily targets</div>
+    <div class="tgts" id="tgts"></div>
+    <div class="setrow">
+      <button class="btn primary" id="saveTargets">Save targets</button>
+      <button class="btn" id="defTargets">Restore defaults</button>
+    </div>
+    <div class="fine" id="tgtNote">
+      Targets travel with the log, so every device sees the same ones, and the assistant is told about them on every message.
+    </div>
+
+    <div class="fine">
+      Protein counts only from complete sources (whey, milk, egg, chicken, mutton, fish, paneer, curd, yogurt).
+      Everything else is logged at 0 protein — calories, fat and carbs still count.
+      Micronutrients are the exception: they count from every food, plants included.
+      The default targets are ICMR-NIN 2020 for an Indian adult man; the minerals sit above US RDAs because phytate in rice and dal blocks absorption.
+      Vitamin C is logged after cooking loss — a boiled or simmered vegetable keeps under half of what it started with, so sambar and kootu count for far less than the raw weight suggests.
+    </div>
+    <div class="setrow">
+      <button class="btn danger" id="reset">Reset all days</button>
+    </div>
+  </div>
+</details>
+
+<script type="module" src="/js/main.js"></script>
+</body>
+</html>

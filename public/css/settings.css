@@ -1,0 +1,54 @@
+/* The Settings drawer, the target editor inside it, and the passphrase gate
+   that covers everything when the server asks for one. */
+
+details{margin-top:4px}
+summary{
+  cursor:pointer;font-size:13px;color:var(--muted);list-style:none;
+  padding:6px 0;user-select:none;
+}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"⚙ "}
+.setrow{display:flex;gap:8px;margin-top:8px;align-items:center}
+.setrow input{
+  flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:9px;padding:8px 10px;font-size:13.5px;
+}
+.fine{font-size:11.5px;color:var(--faint);margin-top:8px;line-height:1.5}
+.danger{color:var(--warn);border-color:var(--warn)}
+
+/* ---- target editor ---- */
+.tgt-head{
+  font-size:12px;font-weight:640;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--muted);margin:14px 0 9px;padding-top:13px;border-top:1px solid var(--border);
+}
+/* Same 2x2-then-one-row shape as the micronutrient strip: eight boxes side by
+   side is unreadable on a phone. Label above the box, so a narrow column
+   never squeezes the number. */
+.tgts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+@media (min-width:520px){ .tgts{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.tgt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.tgt label{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tgt .in{display:flex;align-items:center;gap:5px}
+.tgt input{
+  flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:8px;padding:7px 8px;font-size:13.5px;
+  font-variant-numeric:tabular-nums;text-align:right;
+}
+.tgt .u{font-size:11.5px;color:var(--faint)}
+
+/* ---- passphrase gate ---- */
+/* Covers the page rather than sitting in it: with no passphrase there is no
+   log to show, so a half-rendered empty tracker would only mislead. */
+.gate{
+  position:fixed;inset:0;z-index:20;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  padding:24px calc(20px + env(safe-area-inset-right)) 24px calc(20px + env(safe-area-inset-left));
+}
+.gate-box{width:100%;max-width:330px}
+.gate h2{font-size:17px;font-weight:640;margin:0 0 6px}
+.gate p{font-size:13px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+.gate input{
+  width:100%;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:9px;padding:10px 11px;font-size:16px; /* 16px: iOS zooms below it */
+}
+.gate .btn{width:100%;margin-top:9px;padding:10px;justify-content:center}
