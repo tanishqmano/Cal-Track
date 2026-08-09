@@ -8,6 +8,7 @@ import { MEALS } from '../config/nutrition.js';
 import { uid, day } from '../state/log.js';
 import { editingId, setEditingId } from '../state/session.js';
 import { defaultMeal, totalsLine } from './context.js';
+import { removalWasAsked } from './intent.js';
 
 function applyLogItems(input) {
   const raw = (input && input.items) || [];
@@ -94,6 +95,24 @@ function applyEditItems(input) {
 function applyDeleteItems(input) {
   const ids = (input && input.ids) || [];
   const receipts = [], missing = [];
+
+  // Checked before anything is removed: if the user's message asks for no
+  // removal, this is the assistant misreading a reply about what they have or
+  // want. Refusing costs a clarifying question; being wrong costs their day.
+  const targets = ids.map(id => {
+    const it = day().items.find(x => x.id === id);
+    return it ? it.name : '';
+  }).filter(Boolean);
+
+  if (targets.length && !removalWasAsked(targets)) {
+    return {
+      changed: false, receipts: [],
+      result: 'REFUSED — nothing was deleted. The user\'s message does not ask for anything to be ' +
+              'removed; it reads as a reply about what they have or want, not an instruction. ' +
+              'Do not retry this call. Answer them in words, or ask one short question if you ' +
+              'genuinely think they meant to remove something.'
+    };
+  }
 
   for (const id of ids) {
     const idx = day().items.findIndex(x => x.id === id);
