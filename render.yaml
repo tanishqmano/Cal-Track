@@ -33,3 +33,13 @@ services:
         sync: false
       - key: GEMINI_MODEL
         sync: false
+
+      # Switches on /mcp, so Claude can log a photographed meal straight into
+      # the diary. Empty leaves the endpoint off. It rides in the connector URL,
+      # so it wants its own long random value, not the passphrase.
+      - key: MCP_TOKEN
+        sync: false
+
+      # Minutes ahead of UTC where you eat; only used when Claude names no meal.
+      - key: LOG_UTC_OFFSET_MIN
+        value: "330"

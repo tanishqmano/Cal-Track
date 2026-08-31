@@ -12,6 +12,7 @@ const staticFiles = require('./static');
 const { health } = require('../routes/health');
 const { getState, putState } = require('../routes/state');
 const { parseFood } = require('../routes/parse');
+const { mcp } = require('../routes/mcp');
 
 function createServer() {
   return http.createServer((req, res) => {
@@ -20,6 +21,14 @@ function createServer() {
 
     if (route === '/api/health' && req.method === 'GET') {
       return health(req, res);
+    }
+
+    // Claude's connector, which carries its own token in the path and so is
+    // checked inside the route rather than by the passphrase gate below. It
+    // sits above that gate on purpose: the passphrase is something a person
+    // types into the page, and there is nobody at a keyboard on this path.
+    if (route === '/mcp' || route.startsWith('/mcp/')) {
+      return mcp(req, res, route.startsWith('/mcp/') ? decodeURIComponent(route.slice(5)) : '');
     }
 
     // Everything past here touches either the log or the API key. The check runs

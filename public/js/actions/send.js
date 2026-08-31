@@ -8,7 +8,8 @@ import { serverMode, apiKey } from '../api/config.js';
 import { callApi } from '../api/client.js';
 import { normalize, pushToolTurn } from '../api/adapter.js';
 import { TOOL_IMPL } from '../tools/apply.js';
-import { stateBlock } from '../tools/context.js';
+import { stateBlock, totalsLine } from '../tools/context.js';
+import { parseCards, mealIn, restNeedsModel, logCards, asksAQuestion, describeCards } from '../tools/paste.js';
 import { render, renderTotals, renderList, renderChat } from '../ui/render.js';
 import { showMsg } from '../ui/chat.js';
 
@@ -16,7 +17,11 @@ import { showMsg } from '../ui/chat.js';
 // round-trips happen inside one send and are not persisted — the model gets
 // the current log via stateBlock() instead, so it never works from a stale
 // snapshot of what was logged.
-function buildMessages() {
+//
+// `ask` replaces the text of the final user turn. When rows were pasted, the
+// model is asked about what was left over after they were taken out, so the
+// column of digits never reaches it at all.
+function buildMessages(ask) {
   // 'did' entries are display-only receipts — never sent, they aren't valid roles.
   // 8 is deliberate. stateBlock() already carries the whole current log, so
   // history is only needed to resolve "the other one" style references across
@@ -25,9 +30,30 @@ function buildMessages() {
     .filter(m => m.role === 'user' || m.role === 'assistant')
     .slice(-8)
     .map(m => ({ role: m.role, content: m.text }));
+
+  // An earlier turn's pasted rows are still a column of digits sitting in
+  // history. Say what they were in words instead, so a later turn is not read
+  // against numbers with nothing attached to them.
+  for (let i = 0; i < msgs.length - 1; i++) {
+    if (msgs[i].role !== 'user') continue;
+    const past = parseCards(msgs[i].content);
+    if (!past.items.length) continue;
+    msgs[i].content = (past.rest + '\n' + describeCards(past.items).map(s => '- ' + s).join('\n')).trim();
+  }
+
   const last = msgs[msgs.length - 1];
-  if (last && last.role === 'user') last.content = stateBlock() + '\n\n' + last.content;
+  if (last && last.role === 'user') last.content = stateBlock() + '\n\n' + (ask || last.content);
   return msgs;
+}
+
+// Named so the model cannot read the pasted rows as still outstanding and log
+// them a second time — or delete them to "replace" what it thinks is missing.
+function handledNote(added) {
+  return `<already_logged>\nThese items from the user's message were logged directly, ` +
+    `exactly as they pasted them. They are already in <current_log>. Do not log them again, ` +
+    `and do not remove anything on their account:\n` +
+    added.map(a => `- ${a.name} (${a.meal})`).join('\n') +
+    `\n</already_logged>\n\nWhat is left of their message:\n`;
 }
 
 export async function send() {
@@ -50,7 +76,38 @@ export async function send() {
   let touched = false;   // did this turn modify the log?
 
   try {
-    const msgs = buildMessages();
+    // Rows pasted back off the list carry every number already. Read them here
+    // and the model is never shown a bare column of digits it cannot identify —
+    // which is what used to come back as nameless items worth 0 kcal.
+    const cards = parseCards(text);
+    let ask = null;
+
+    if (cards.items.length && asksAQuestion(cards.rest)) {
+      // Pointing at a row to ask about it. Nothing is logged; the model just
+      // gets the numbers in a form it can read.
+      ask = cards.rest + '\n\nThe rows they pasted, with their numbers:\n' +
+            describeCards(cards.items).map(s => '- ' + s).join('\n');
+    } else if (cards.items.length) {
+      undoSnap = snapshotOf(day());
+      const out = logCards(cards.items, mealIn(text));
+      day().chat.push({ role: 'did', text: out.receipts.join('\n') });
+      touched = true;
+      save();
+      renderTotals(); renderList(); renderChat();
+
+      // Nothing left but "add this for dinner": the turn is already done, and
+      // asking the model would only spend a request to restate our own totals.
+      if (!restNeedsModel(cards.rest)) {
+        const n = out.added.length;
+        day().chat.push({ role: 'assistant', text:
+          `Logged ${n} pasted item${n === 1 ? '' : 's'} for ${out.added[0].meal}, ` +
+          `exactly as given. ${totalsLine()}` });
+        return;
+      }
+      ask = handledNote(out.added) + cards.rest;
+    }
+
+    const msgs = buildMessages(ask);
 
     // Tool-use loop: model may log, then speak. Two hops is enough for
     // log-then-confirm; the cap stops any runaway.

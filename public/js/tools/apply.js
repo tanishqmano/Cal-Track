@@ -8,27 +8,113 @@ import { MEALS } from '../config/nutrition.js';
 import { uid, day } from '../state/log.js';
 import { editingId, setEditingId } from '../state/session.js';
 import { defaultMeal, totalsLine } from './context.js';
-import { removalWasAsked } from './intent.js';
+import { removalRefusal } from './intent.js';
+
+/* Reading what the model actually sent.
+ *
+ * A small model answers with the right shape most of the time and something
+ * near it the rest: `kcal` for `calories`, a number as a string, occasionally a
+ * bare string where an object belongs. The near misses are worth repairing.
+ *
+ * What is not worth accepting is an item with no name or no calories. That used
+ * to be coerced into a row reading "Item · 0 kcal", which is worse than no row
+ * at all — it looks to the user like the food went in, and the totals quietly
+ * disagree with the list. Those are refused, and the tool result says exactly
+ * what was wrong so the next hop can send it again properly. */
+const ALIAS = {
+  calories: ['calories', 'calorie', 'kcal', 'cals', 'cal', 'energy'],
+  protein: ['protein', 'protein_g', 'prot'],
+  fat: ['fat', 'fat_g'],
+  carbs: ['carbs', 'carbohydrate', 'carbohydrates', 'carb', 'carbs_g'],
+  zinc: ['zinc', 'zn'],
+  iron: ['iron', 'fe'],
+  magnesium: ['magnesium', 'magnesium_mg', 'mg'],
+  vitamin_c: ['vitamin_c', 'vitaminc', 'vit_c', 'vitc', 'vc']
+};
+const NAME_KEYS = ['name', 'food', 'item', 'label', 'title', 'description'];
+
+// "364", 364 and "364 kcal" all mean the same thing. Anything else means none.
+function num(v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  if (typeof v !== 'string') return null;
+  const m = /-?\d+(?:\.\d+)?/.exec(v);
+  return m ? Number(m[0]) : null;
+}
+
+function field(o, key) {
+  for (const k of ALIAS[key]) {
+    if (o[k] === undefined || o[k] === null) continue;
+    const n = num(o[k]);
+    if (n !== null) return n;
+  }
+  return null;
+}
+
+function readItem(raw, fallbackMeal) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { bad: `one entry was ${Array.isArray(raw) ? 'an array' : typeof raw}, not an object` };
+  }
+
+  let name = '';
+  for (const k of NAME_KEYS) {
+    if (typeof raw[k] === 'string' && raw[k].trim()) { name = raw[k].trim().slice(0, 120); break; }
+  }
+  if (!name) return { bad: 'one entry had no "name"' };
+
+  // Zero calories is a real answer (water, black coffee). A missing one is not.
+  const cal = field(raw, 'calories');
+  if (cal === null) return { bad: `"${name}" had no "calories" number` };
+
+  const protein = field(raw, 'protein');
+  return {
+    item: {
+      id: uid(),
+      name,
+      meal: MEALS.includes(raw.meal) ? raw.meal : fallbackMeal,
+      cal: clamp0(r0(cal)),
+      // Complete-protein rule enforced here, whatever the model returned.
+      p: raw.protein_source === 'complete' ? clamp0(r1(protein)) : 0,
+      f: clamp0(r1(field(raw, 'fat'))),
+      c: clamp0(r1(field(raw, 'carbs'))),
+      // Micros count from every food, plant included — no source rule here.
+      zn: clamp0(r1(field(raw, 'zinc'))),
+      fe: clamp0(r1(field(raw, 'iron'))),
+      mg: clamp0(r0(field(raw, 'magnesium'))),
+      vc: clamp0(r1(field(raw, 'vitamin_c')))
+    }
+  };
+}
+
+// `items` should be an array. Accept a lone object, and an item sent flat at
+// the top level, rather than dropping a call that is only shaped slightly wrong.
+function itemList(input) {
+  if (!input || typeof input !== 'object') return [];
+  if (Array.isArray(input.items)) return input.items;
+  if (input.items && typeof input.items === 'object') return [input.items];
+  if (Array.isArray(input)) return input;
+  if (NAME_KEYS.some(k => typeof input[k] === 'string')) return [input];
+  return [];
+}
+
+const RESEND = 'Each item needs a "name" string and a "calories" number, alongside ' +
+  'protein, protein_source, fat, carbs, zinc, iron, magnesium, vitamin_c and meal. ' +
+  'Send log_items again with a complete object per item.';
 
 function applyLogItems(input) {
-  const raw = (input && input.items) || [];
-  const added = raw.map(it => ({
-    id: uid(),
-    name: String(it.name || 'Item').slice(0, 120),
-    meal: MEALS.includes(it.meal) ? it.meal : defaultMeal(),
-    cal: clamp0(r0(it.calories)),
-    // Complete-protein rule enforced here, whatever the model returned.
-    p: it.protein_source === 'complete' ? clamp0(r1(it.protein)) : 0,
-    f: clamp0(r1(it.fat)),
-    c: clamp0(r1(it.carbs)),
-    // Micros count from every food, plant included — no source rule here.
-    zn: clamp0(r1(it.zinc)),
-    fe: clamp0(r1(it.iron)),
-    mg: clamp0(r0(it.magnesium)),
-    vc: clamp0(r1(it.vitamin_c))
-  }));
+  const fallbackMeal = defaultMeal();
+  const added = [], bad = [];
 
-  if (!added.length) return { changed: false, receipts: [], result: 'No items were provided, so nothing was logged.' };
+  for (const raw of itemList(input)) {
+    const read = readItem(raw, fallbackMeal);
+    if (read.bad) bad.push(read.bad); else added.push(read.item);
+  }
+
+  if (!added.length) {
+    return { changed: false, receipts: [], result: bad.length
+      ? `NOTHING WAS LOGGED — the tool input was malformed: ${bad.join('; ')}. ${RESEND} ` +
+        'Do not tell the user anything was logged.'
+      : 'No items were provided, so nothing was logged.' };
+  }
 
   for (const it of added) day().items.push(it);
   const zeroed = added.filter(a => a.p === 0).map(a => a.name);
@@ -39,6 +125,7 @@ function applyLogItems(input) {
     result: [
       `Logged ${added.length} item(s): ${added.map(a => `${a.name} (${a.meal})`).join(', ')}.`,
       zeroed.length ? `Protein set to 0 for: ${zeroed.join(', ')} (not complete sources).` : '',
+      bad.length ? `NOT logged, malformed: ${bad.join('; ')}. ${RESEND}` : '',
       totalsLine()
     ].filter(Boolean).join(' ')
   };
@@ -104,15 +191,8 @@ function applyDeleteItems(input) {
     return it ? it.name : '';
   }).filter(Boolean);
 
-  if (targets.length && !removalWasAsked(targets)) {
-    return {
-      changed: false, receipts: [],
-      result: 'REFUSED — nothing was deleted. The user\'s message does not ask for anything to be ' +
-              'removed; it reads as a reply about what they have or want, not an instruction. ' +
-              'Do not retry this call. Answer them in words, or ask one short question if you ' +
-              'genuinely think they meant to remove something.'
-    };
-  }
+  const refusal = targets.length ? removalRefusal(targets) : '';
+  if (refusal) return { changed: false, receipts: [], result: refusal };
 
   for (const id of ids) {
     const idx = day().items.findIndex(x => x.id === id);
