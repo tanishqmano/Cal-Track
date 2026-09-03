@@ -20,6 +20,7 @@
  *   src/store/    the log, as a JSON file or a MongoDB document
  *   src/http/     responses, the passphrase gate, static files, the route map
  *   src/routes/   one file per endpoint
+ *   src/mcp/      the connector's tools: what they are, and what they do
  *   src/          the token meter and the startup banner
  *
  * This file stays at the root and stays thin: `node server.js` is the start
