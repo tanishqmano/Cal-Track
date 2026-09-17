@@ -42,14 +42,36 @@ const SWAP_WORDS = /\b(replace|replacing|swap|swapped|switch|instead|make it|cha
 // "I didn't have the second idli" — never by naming an amount. So a message
 // carrying one is a report of food eaten, and signal 1 below must not read the
 // food's own name in it as permission to delete that food.
-const QUANTITY = /\b\d+(?:\.\d+)?\s*(?:g|gm|gms|gram|grams|kg|ml|l|litre|liter|oz|scoops?|cups?|katori|pieces?|slices?|tbsp|tsp|bowls?|glass(?:es)?|plates?|servings?|eggs?|idlis?|dosas?|rotis?|chapatis?)\b/i;
+// US units are in here for the same reason the metric ones are: "2 slices of
+// toast" and "1 lb ground beef" report food eaten, and without the unit the
+// message reads as bare prose that signal 1 could wave a delete through on.
+//
+// Two patterns, because the two kinds of unit are written differently. A
+// measure sits right against its number — "6 oz", "1.5 cups". A countable
+// thing takes the food's name in between: "1 protein bar", "2 chicken tacos",
+// "3 slices of pizza". Requiring adjacency for those missed every one of them.
+const MEASURE = 'g|gm|gms|gram|grams|kg|ml|l|litre|liter|oz|ounces?|fl\\.?\\s?oz|lbs?|pounds?|' +
+                'cups?|tbsp|tsp|tablespoons?|teaspoons?|scoops?|servings?|katori';
+const COUNTABLE = 'pieces?|slices?|bowls?|glass(?:es)?|plates?|eggs?|cans?|bottles?|bars?|' +
+                  'packets?|packs?|strips?|sticks?|patt(?:y|ies)|wings?|links?|sandwich(?:es)?|' +
+                  'burritos?|tacos?|idlis?|dosas?|rotis?|chapatis?';
+
+// Loosening this cannot let a wanted delete through: REMOVE_WORDS is tested
+// first and settles the message on its own, so this only ever sees text that
+// asked for no removal in words.
+const QUANTITY = new RegExp(
+  `\\b\\d+(?:\\.\\d+)?\\s*(?:${MEASURE})\\b` +
+  `|\\b\\d+(?:\\.\\d+)?\\s*(?:[a-z-]+\\s+){0,2}(?:${COUNTABLE})\\b`, 'i');
 
 // Words that appear in item names but say nothing about which food it is.
 const FILLER = new Set([
   'scoop', 'scoops', 'cup', 'cups', 'bowl', 'bowls', 'katori', 'piece', 'pieces',
   'plate', 'plates', 'serving', 'servings', 'glass', 'glasses', 'slice', 'slices',
+  'ounce', 'ounces', 'pound', 'pounds', 'can', 'cans', 'bottle', 'bottles',
+  'bar', 'bars', 'packet', 'pack', 'strip', 'strips', 'stick', 'sticks',
   'small', 'large', 'medium', 'half', 'tbsp', 'tsp', 'restaurant', 'homemade',
-  'raw', 'cooked', 'boiled', 'fried', 'and', 'with', 'the'
+  'raw', 'cooked', 'boiled', 'fried', 'grilled', 'baked', 'roasted',
+  'fresh', 'frozen', 'canned', 'and', 'with', 'the'
 ]);
 
 const words = s => String(s).toLowerCase().split(/[^a-z']+/).filter(Boolean);

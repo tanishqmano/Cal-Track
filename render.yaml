@@ -40,6 +40,7 @@ services:
       - key: MCP_TOKEN
         sync: false
 
-      # Minutes ahead of UTC where you eat; only used when Claude names no meal.
-      - key: LOG_UTC_OFFSET_MIN
-        value: "330"
+      # The timezone you eat in; only used when Claude names no meal. An IANA
+      # zone name rather than an offset, so the clock change is handled here.
+      - key: LOG_TZ
+        value: "America/Los_Angeles"

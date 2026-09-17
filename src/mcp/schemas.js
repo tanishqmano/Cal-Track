@@ -16,16 +16,16 @@ const { MEALS } = require('./log');
 // once. `meal` is deliberately not required outside log_food: an edit that does
 // not mention the meal should leave it where it is.
 const ITEM_FIELDS = {
-  name: { type: 'string', description: 'Short label including the quantity, e.g. "50 g oats" or "1 scoop (30 g) whey".' },
+  name: { type: 'string', description: 'Short label including the quantity in grams, e.g. "50 g oats", "1 scoop (30 g) whey", "6 oz (170 g) chicken breast". Convert ounces, pounds and cups to grams and keep the gram figure in the label.' },
   calories: { type: 'number', description: 'Total kcal for the quantity described.' },
   protein: { type: 'number', description: 'Protein in grams. Stored as 0 unless protein_source is "complete".' },
   fat: { type: 'number', description: 'Fat in grams for the quantity described.' },
   carbs: { type: 'number', description: 'Carbohydrate in grams for the quantity described.' },
-  protein_source: { type: 'string', enum: ['complete', 'incomplete', 'none'], description: 'Whether the protein in this food comes from a complete source. Grains, dals and nuts are "incomplete".' },
+  protein_source: { type: 'string', enum: ['complete', 'incomplete', 'none'], description: 'Whether the protein in this food comes from a complete source. Grains, bread, pasta, beans, dals, tofu and nuts are "incomplete".' },
   zinc: { type: 'number', description: 'Zinc in mg. Counts from plant foods too.' },
   iron: { type: 'number', description: 'Iron in mg. Counts from plant foods too.' },
   magnesium: { type: 'number', description: 'Magnesium in mg. Counts from plant foods too.' },
-  vitamin_c: { type: 'number', description: 'Vitamin C in mg AFTER cooking loss. 0 for all grains, dals, nuts, meat, fish, egg, dairy and fats.' },
+  vitamin_c: { type: 'number', description: 'Vitamin C in mg AFTER cooking loss. 0 for all grains, bread, pasta, beans, dals, nuts, meat, fish, egg, dairy and fats.' },
   meal: { type: 'string', enum: MEALS, description: 'Which meal this belongs to. Use what the user said; guess from the time of day only if they said nothing.' }
 };
 

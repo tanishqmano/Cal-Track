@@ -288,7 +288,7 @@ async function setTargets(input) {
     // sync.js settles targets by whichever side set them last and takes that
     // object outright — so writing only the changed fields with a fresh
     // targetsAt would drop every target the user set on the page, and
-    // normalizeState() would quietly refill them from the ICMR defaults.
+    // normalizeState() would quietly refill them from DEFAULT_TARGETS.
     const before = fillTargets(state);
     const next = Object.assign({}, before);
 

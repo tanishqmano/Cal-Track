@@ -17,7 +17,7 @@ export const LOG_TOOL = {
         items: {
           type: 'object',
           properties: {
-            name: { type: 'string', description: 'Short label including the quantity, e.g. "50 g oats" or "1 scoop (30 g) whey".' },
+            name: { type: 'string', description: 'Short label including the quantity in grams, e.g. "50 g oats", "1 scoop (30 g) whey", "6 oz (170 g) chicken breast". Convert ounces, pounds and cups to grams and keep the gram figure in the label.' },
             calories: { type: 'number', description: 'Total kcal for the quantity described.' },
             protein: { type: 'number', description: 'Protein in grams. MUST be 0 unless protein_source is "complete".' },
             fat: { type: 'number', description: 'Fat in grams for the quantity described.' },
@@ -26,7 +26,7 @@ export const LOG_TOOL = {
             zinc: { type: 'number', description: 'Zinc in mg for the quantity described. Counts from plant foods too.' },
             iron: { type: 'number', description: 'Iron in mg for the quantity described. Counts from plant foods too.' },
             magnesium: { type: 'number', description: 'Magnesium in mg for the quantity described. Counts from plant foods too.' },
-            vitamin_c: { type: 'number', description: 'Vitamin C in mg AFTER the cooking loss for how this food was prepared. 0 for all grains, dals, nuts, meat, fish, egg, dairy and fats.' },
+            vitamin_c: { type: 'number', description: 'Vitamin C in mg AFTER the cooking loss for how this food was prepared. 0 for all grains, bread, pasta, beans, dals, nuts, meat, fish, egg, dairy and fats.' },
             meal: { type: 'string', enum: MEALS, description: 'Required. If the user named a meal anywhere in their message ("for breakfast", "at lunch", "dinner was"), use that one. Only fall back to default_meal from <current_log> when they named none.' }
           },
           required: ['name', 'calories', 'protein', 'fat', 'carbs', 'protein_source', 'zinc', 'iron', 'magnesium', 'vitamin_c', 'meal']

@@ -35,7 +35,7 @@ export function restoreDefaultTargets() {
   state.targetsAt = Date.now();
   normalizeState();
   save(); render();
-  $('tgtNote').textContent = 'Back to the ICMR-NIN defaults.';
+  $('tgtNote').textContent = 'Back to the US RDA defaults.';
 }
 
 export async function saveApiKey() {
