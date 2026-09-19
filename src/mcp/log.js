@@ -38,24 +38,29 @@ const TARGET_DEC = { cal: false, p: false, f: false, c: false, zn: true, fe: tru
 // enough to file an 11am breakfast as lunch. LOG_UTC_OFFSET_MIN is still read
 // for zones that skip DST (Arizona, Hawaii) and for .env files written before
 // LOG_TZ existed.
+// state.tz, set in the app under Settings, is the real source. These two are
+// the fallback for a log written before that setting existed, and a way to fix
+// the zone from the host dashboard if the app itself is somehow unreachable.
 const TZ = pick('LOG_TZ');
 const UTC_OFFSET_MIN = Number(pick('LOG_UTC_OFFSET_MIN')) || 0;
 
-// Intl throws a RangeError on a zone name it does not know, and a typo in .env
-// must not take the connector down with it. Build the formatter once, at load,
-// so a bad name is caught here rather than on the first meal of the day.
-const localHour = (() => {
-  if (TZ) {
+// Intl throws a RangeError on a zone name it does not know, and a bad name —
+// typed into .env or into the app — must not take the connector down with it.
+// The page's copy of this is hourIn() in public/js/lib/clock.js.
+function hourIn(tz) {
+  if (tz) {
     try {
-      const fmt = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: 'numeric', hourCycle: 'h23' });
-      fmt.format(new Date());
-      return () => Number(fmt.format(new Date()));
-    } catch {
-      console.warn(`LOG_TZ="${TZ}" is not a timezone this Node knows. Falling back to LOG_UTC_OFFSET_MIN=${UTC_OFFSET_MIN}.`);
-    }
+      return Number(new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, hour: 'numeric', hourCycle: 'h23'
+      }).format(new Date()));
+    } catch { /* fall through to the env fallback */ }
   }
-  return () => new Date(Date.now() + UTC_OFFSET_MIN * 60 * 1000).getUTCHours();
-})();
+  return null;
+}
+
+if (TZ && hourIn(TZ) === null) {
+  console.warn(`LOG_TZ="${TZ}" is not a timezone this Node knows. Falling back to LOG_UTC_OFFSET_MIN=${UTC_OFFSET_MIN}.`);
+}
 
 /* ------------------------------------------------------------- arithmetic -- */
 
@@ -67,8 +72,16 @@ const r0 = n => Math.round(Number(n) || 0);
 const r1 = n => Math.round((Number(n) || 0) * 10) / 10;
 const uid = () => Math.random().toString(36).slice(2, 10);
 
-function defaultMeal() {
-  const h = localHour();
+// Takes the state so the zone set in the app wins over anything in .env. This
+// process runs in UTC on the host, so without a zone from somewhere the 8pm
+// dinner it is asked to log is filed as the next morning's breakfast.
+//
+// Same boundaries as defaultMeal() in public/js/tools/context.js; if these
+// move, move them there too.
+function defaultMeal(state) {
+  const h = hourIn((state && state.tz) || '') ??
+            hourIn(TZ) ??
+            new Date(Date.now() + UTC_OFFSET_MIN * 60 * 1000).getUTCHours();
   return h < 11 ? 'Breakfast' : h < 16 ? 'Lunch' : h < 18 ? 'Snack' : 'Dinner';
 }
 

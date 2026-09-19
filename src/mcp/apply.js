@@ -35,11 +35,13 @@ async function logFood(input) {
   const raw = (input && input.items) || [];
   if (!Array.isArray(raw) || !raw.length) return 'No items were provided, so nothing was logged.';
 
-  const fallback = defaultMeal();
   const added = raw.map(it => ({
     id: uid(),
     name: String(it.name || 'Item').slice(0, 120),
-    meal: MEALS.includes(it.meal) ? it.meal : fallback,
+    // Left null and filled inside mutate() below, where the state is in hand —
+    // the timezone the meal is guessed from is stored in the log itself now,
+    // so there is nothing to guess with out here.
+    meal: MEALS.includes(it.meal) ? it.meal : null,
     cal: clamp0(r0(it.calories)),
     // The page enforces this in public/js/tools/apply.js and so must this:
     // protein only counts from a complete source. Letting it through here
@@ -64,7 +66,11 @@ async function logFood(input) {
     if (sel.why) return { changed: false, text: sel.why + ' Nothing was logged.' };
     const day = state.days[sel.idx];
 
-    for (const it of added) day.items.push(it);
+    const fallback = defaultMeal(state);
+    for (const it of added) {
+      if (!it.meal) it.meal = fallback;
+      day.items.push(it);
+    }
     return { changed: true, text: [
       `Logged ${added.length} item(s) into ${where(state, sel.idx)}: ${added.map(a => `${a.name} (${a.meal})`).join(', ')}.`,
       zeroed.length ? `Protein set to 0 for: ${zeroed.join(', ')} (not complete sources).` : '',

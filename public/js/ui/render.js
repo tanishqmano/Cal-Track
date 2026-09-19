@@ -7,6 +7,7 @@ import { renderTotals } from './totals.js';
 import { renderList } from './list.js';
 import { renderChat, renderUndo } from './chat.js';
 import { renderTargets } from './targets.js';
+import { renderTimezone } from './timezone.js';
 
 function renderDays() {
   const sel = $('daySel');
@@ -21,6 +22,7 @@ export function render() {
   renderChat();
   renderUndo();
   renderTargets();
+  renderTimezone();
 }
 
-export { renderTotals, renderList, renderChat, renderUndo, renderTargets };
+export { renderTotals, renderList, renderChat, renderUndo, renderTargets, renderTimezone };

@@ -38,6 +38,19 @@ export function restoreDefaultTargets() {
   $('tgtNote').textContent = 'Back to the US RDA defaults.';
 }
 
+/* Saved on change rather than behind a button: it is one dropdown, and a zone
+ * left unsaved would quietly keep filing meals under the old one. */
+export function saveTimezone() {
+  const tz = $('tzSel').value || '';
+  state.tz = tz;
+  state.tzAt = Date.now();
+  normalizeState();
+  save(); render();
+  $('tzNote').textContent = tz
+    ? 'Saved. The app and the Claude connector both use this now.'
+    : "Saved. Each device uses its own clock; the Claude connector falls back to the server's setting.";
+}
+
 export async function saveApiKey() {
   const key = $('key').value.trim();
   setApiKey(key);

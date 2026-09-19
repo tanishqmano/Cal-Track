@@ -3,10 +3,13 @@
  * tool call. */
 
 import { g } from '../lib/numbers.js';
-import { day, dayTotals, TARGETS } from '../state/log.js';
+import { hourIn } from '../lib/clock.js';
+import { state, day, dayTotals, TARGETS } from '../state/log.js';
 
+// Same boundaries as defaultMeal() in src/mcp/log.js. If these move, move them
+// there too, or the app and the connector will file the same plate differently.
 export function defaultMeal() {
-  const h = new Date().getHours();
+  const h = hourIn(state.tz);
   return h < 11 ? 'Breakfast' : h < 16 ? 'Lunch' : h < 18 ? 'Snack' : 'Dinner';
 }
 

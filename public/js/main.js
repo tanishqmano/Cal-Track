@@ -24,7 +24,7 @@ import { render } from './ui/render.js';
 import { send } from './actions/send.js';
 import { selectDay, addDay, deleteDay } from './actions/days.js';
 import { onListClick, doUndo } from './actions/items.js';
-import { saveTargets, restoreDefaultTargets, saveApiKey, resetAll } from './actions/settings.js';
+import { saveTargets, restoreDefaultTargets, saveTimezone, saveApiKey, resetAll } from './actions/settings.js';
 
 // Describes where the key and the log are coming from, once both are known.
 function describeSetup(synced) {
@@ -54,6 +54,7 @@ function wire() {
 
   $('saveTargets').addEventListener('click', saveTargets);
   $('defTargets').addEventListener('click', restoreDefaultTargets);
+  $('tzSel').addEventListener('change', saveTimezone);
   $('saveKey').addEventListener('click', saveApiKey);
   $('reset').addEventListener('click', resetAll);
 

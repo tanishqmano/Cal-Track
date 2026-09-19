@@ -21,12 +21,16 @@ export let TARGETS = Object.assign({}, DEFAULT_TARGETS);
 export const uid = () => Math.random().toString(36).slice(2, 10);
 export const newDay = n => ({ id: uid(), label: 'Day ' + n, items: [], chat: [] });
 
-// Targets carry over a reset — they are a setting, not logged data. targetsAt
-// is only read when two devices disagree; see mergeState().
+// Targets and the timezone carry over a reset — they are settings, not logged
+// data. The *At stamps are only read when two devices disagree; see
+// mergeState(). They are kept apart so that setting the zone on the phone
+// cannot revert targets set on the laptop, and the other way round.
 export const freshState = () => ({
   v: 1, active: 0,
   targets: Object.assign({}, TARGETS),
   targetsAt: (state && state.targetsAt) || 0,
+  tz: (state && state.tz) || '',
+  tzAt: (state && state.tzAt) || 0,
   days: [newDay(1)]
 });
 
@@ -61,6 +65,12 @@ export function normalizeState() {
   }
   TARGETS = state.targets;
   if (typeof state.targetsAt !== 'number') state.targetsAt = 0;
+
+  // Empty is a real setting, not a missing one: it means "use whatever clock
+  // the device is on". Only the connector, which runs on a server in UTC,
+  // needs a name here. A log written before this existed has neither field.
+  if (typeof state.tz !== 'string') state.tz = '';
+  if (typeof state.tzAt !== 'number') state.tzAt = 0;
 
   for (const d of state.days) {
     if (!Array.isArray(d.items)) d.items = [];

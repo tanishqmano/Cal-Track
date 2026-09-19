@@ -48,10 +48,24 @@ export function mergeState(mine, theirs) {
   for (const b of remote.values()) days.push(b);
 
   // Targets are one small object, not a list, so there is nothing to fold
-  // together field by field: whichever side set them last wins outright.
+  // together field by field: whichever side set them last wins outright. The
+  // timezone is settled the same way but on its own stamp, so changing the
+  // zone on the phone cannot drag stale targets along with it.
   const newer = (Number(theirs.targetsAt) || 0) > (Number(mine.targetsAt) || 0) ? theirs : mine;
+  const newerTz = (Number(theirs.tzAt) || 0) > (Number(mine.tzAt) || 0) ? theirs : mine;
 
-  return { v: 1, active: mine.active, targets: newer.targets, targetsAt: newer.targetsAt || 0, days };
+  // Every field the log carries has to be named here. This rebuilds the state
+  // object rather than spreading it, so anything left out is dropped on the
+  // next merge — silently, and only on the devices that went offline.
+  return {
+    v: 1,
+    active: mine.active,
+    targets: newer.targets,
+    targetsAt: newer.targetsAt || 0,
+    tz: newerTz.tz || '',
+    tzAt: newerTz.tzAt || 0,
+    days
+  };
 }
 
 // Returns { ok, changed } — ok false simply means the page is running without a
