@@ -18,12 +18,11 @@ const { store } = require('../store');
 
 const MEALS = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
 
-// US RDAs for an adult man, from DEFAULT_TARGETS in public/js/config/
-// nutrition.js — which is also where the note lives on why these sit below the
-// Indian numbers this tracker used to carry. Needed here so set_targets can
-// write a complete targets object; see fillTargets() for why a partial one is
-// unsafe.
-const DEFAULT_TARGETS = { cal: 2150, p: 110, f: 65, c: 280, zn: 11, fe: 8, mg: 400, vc: 90 };
+// From DEFAULT_TARGETS in public/js/config/nutrition.js, which is where the
+// note lives on why the macros are personal goals and the micronutrients are
+// the US RDAs. Needed here so set_targets can write a complete targets object;
+// see fillTargets() for why a partial one is unsafe.
+const DEFAULT_TARGETS = { cal: 2500, p: 130, f: 75, c: 325, zn: 11, fe: 8, mg: 400, vc: 90 };
 
 // Which targets are worth a decimal place, from TARGET_FIELDS in the same
 // file: 17.5 mg of zinc is a real setting, 2150.5 kcal is not.
