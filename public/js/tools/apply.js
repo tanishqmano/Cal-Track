@@ -50,6 +50,43 @@ function field(o, key) {
   return null;
 }
 
+/* Staples whose protein is complete whatever label the model sends.
+ *
+ * A small model knows milk is dairy when asked outright. But once one milk row
+ * shows P 0 in <current_log>, it copies that row for every milk after it: sent
+ * "incomplete" three times out of three on gemini-3.5-flash-lite. For a plain
+ * staple the name settles it, so the model is not asked. Only a name that is
+ * the food and nothing else qualifies — "almond milk", "oats with milk", "egg
+ * noodles" and "mac and cheese" all fall through to protein_source as before.
+ *
+ * Same list as plainComplete() in src/mcp/apply.js. If it changes, change it
+ * there too, or the app and the connector will count the same glass differently. */
+const FILLER = /^(?:[\d./]+|%|g|gm|grams?|kg|ml|l|oz|fl|lbs?|cups?|scoops?|tbsp|tsp|glass(?:es)?|bowls?|cans?|servings?|pieces?|slices?|large|medium|small|of|a|an|x)$/;
+const MODIFIER = '(?:whole|skim|skimmed|low|non|nonfat|fat|free|reduced|full|toned|lactose|plain|greek|boiled|hard|scrambled|fried|poached|grilled|baked|roast|roasted|smoked|cooked|canned|ground|lean|boneless|skinless|raw|fresh)';
+const STAPLE = '(?:milk|whey(?: protein)?(?: isolate)?|casein|eggs?|egg whites?|yogh?urt|curd|paneer|cottage cheese|cheese|chicken(?: breast| thigh)?|turkey(?: breast)?|beef|steak|pork|lamb|mutton|goat|fish|salmon|tuna|shrimp|prawns?)';
+const PLAIN_COMPLETE = new RegExp(`^(?:${MODIFIER} )*${STAPLE}$`);
+
+function plainComplete(name) {
+  const bare = String(name || '').toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')         // "1 cup (240 g) milk" — the weight is noise here
+    .replace(/(\d)([a-z%])/g, '$1 $2')   // "140g" → "140 g", "2%" → "2 %"
+    .split(/[\s,-]+/)
+    .filter(w => w && !FILLER.test(w))
+    .join(' ');
+  return PLAIN_COMPLETE.test(bare);
+}
+
+// What the log keeps as protein: 0 unless the source is complete. A plain
+// staple sent with 0 had that number copied off a zeroed row, not estimated —
+// milk is never protein-free — so it is worked back out of the calories, which
+// the prompt has the model build from the true protein (4P + 9F + 4C).
+function storedProtein(source, name, protein, cal, fat, carbs) {
+  const plain = plainComplete(name);
+  if (source !== 'complete' && !plain) return 0;
+  if (plain && !(Number(protein) > 0)) return clamp0(r1((cal - 9 * (fat || 0) - 4 * (carbs || 0)) / 4));
+  return clamp0(r1(protein));
+}
+
 function readItem(raw, fallbackMeal) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return { bad: `one entry was ${Array.isArray(raw) ? 'an array' : typeof raw}, not an object` };
@@ -65,7 +102,7 @@ function readItem(raw, fallbackMeal) {
   const cal = field(raw, 'calories');
   if (cal === null) return { bad: `"${name}" had no "calories" number` };
 
-  const protein = field(raw, 'protein');
+  const fat = field(raw, 'fat'), carbs = field(raw, 'carbs');
   return {
     item: {
       id: uid(),
@@ -73,9 +110,9 @@ function readItem(raw, fallbackMeal) {
       meal: MEALS.includes(raw.meal) ? raw.meal : fallbackMeal,
       cal: clamp0(r0(cal)),
       // Complete-protein rule enforced here, whatever the model returned.
-      p: raw.protein_source === 'complete' ? clamp0(r1(protein)) : 0,
-      f: clamp0(r1(field(raw, 'fat'))),
-      c: clamp0(r1(field(raw, 'carbs'))),
+      p: storedProtein(raw.protein_source, name, field(raw, 'protein'), cal, fat, carbs),
+      f: clamp0(r1(fat)),
+      c: clamp0(r1(carbs)),
       // Micros count from every food, plant included — no source rule here.
       zn: clamp0(r1(field(raw, 'zinc'))),
       fe: clamp0(r1(field(raw, 'iron'))),
@@ -151,9 +188,9 @@ function applyEditItems(input) {
     if (e.vitamin_c !== undefined) it.vc = clamp0(r1(e.vitamin_c));
     if (MEALS.includes(e.meal)) it.meal = e.meal;
     // Complete-protein rule again: protein can only become non-zero when the
-    // model explicitly declares the source complete.
+    // model declares the source complete, or the item is a plain staple.
     if (e.protein !== undefined) {
-      it.p = e.protein_source === 'complete' ? clamp0(r1(e.protein)) : 0;
+      it.p = storedProtein(e.protein_source, it.name, e.protein, it.cal, it.f, it.c);
     }
 
     // An edit that sets every field to what it already held changed nothing.

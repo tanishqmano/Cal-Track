@@ -31,6 +31,33 @@ const where = (state, idx) => state.days[idx].label + (idx === state.active ? ''
 
 /* ---------------------------------------------------------------- items -- */
 
+// Plain staples — "140 g milk", "2 large eggs", "1 scoop (30 g) whey" — count
+// as complete whatever protein_source says. The reasoning, and the list, live
+// with plainComplete() in public/js/tools/apply.js; keep the two identical.
+const FILLER = /^(?:[\d./]+|%|g|gm|grams?|kg|ml|l|oz|fl|lbs?|cups?|scoops?|tbsp|tsp|glass(?:es)?|bowls?|cans?|servings?|pieces?|slices?|large|medium|small|of|a|an|x)$/;
+const MODIFIER = '(?:whole|skim|skimmed|low|non|nonfat|fat|free|reduced|full|toned|lactose|plain|greek|boiled|hard|scrambled|fried|poached|grilled|baked|roast|roasted|smoked|cooked|canned|ground|lean|boneless|skinless|raw|fresh)';
+const STAPLE = '(?:milk|whey(?: protein)?(?: isolate)?|casein|eggs?|egg whites?|yogh?urt|curd|paneer|cottage cheese|cheese|chicken(?: breast| thigh)?|turkey(?: breast)?|beef|steak|pork|lamb|mutton|goat|fish|salmon|tuna|shrimp|prawns?)';
+const PLAIN_COMPLETE = new RegExp(`^(?:${MODIFIER} )*${STAPLE}$`);
+
+function plainComplete(name) {
+  const bare = String(name || '').toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/(\d)([a-z%])/g, '$1 $2')
+    .split(/[\s,-]+/)
+    .filter(w => w && !FILLER.test(w))
+    .join(' ');
+  return PLAIN_COMPLETE.test(bare);
+}
+
+// Also mirrored from the page: a plain staple sent with 0 protein gets it back
+// from its calories rather than being stored as protein-free.
+function storedProtein(source, name, protein, cal, fat, carbs) {
+  const plain = plainComplete(name);
+  if (source !== 'complete' && !plain) return 0;
+  if (plain && !(Number(protein) > 0)) return clamp0(r1((Number(cal) - 9 * (Number(fat) || 0) - 4 * (Number(carbs) || 0)) / 4));
+  return clamp0(r1(protein));
+}
+
 async function logFood(input) {
   const raw = (input && input.items) || [];
   if (!Array.isArray(raw) || !raw.length) return 'No items were provided, so nothing was logged.';
@@ -47,7 +74,7 @@ async function logFood(input) {
     // protein only counts from a complete source. Letting it through here
     // would put numbers in the log that the app's own rule would have zeroed,
     // and the two ways in would start disagreeing about the same plate.
-    p: it.protein_source === 'complete' ? clamp0(r1(it.protein)) : 0,
+    p: storedProtein(it.protein_source, it.name, it.protein, it.calories, it.fat, it.carbs),
     f: clamp0(r1(it.fat)),
     c: clamp0(r1(it.carbs)),
     zn: clamp0(r1(it.zinc)),
@@ -136,7 +163,7 @@ async function editFood(input) {
       if (e.vitamin_c !== undefined) it.vc = clamp0(r1(e.vitamin_c));
       if (MEALS.includes(e.meal)) it.meal = e.meal;
       // Complete-protein rule again: protein can only become non-zero when the
-      // source is explicitly declared complete, so an edit that sends a number
+      // source is declared complete or the item is a plain staple, so an edit that sends a number
       // without one zeroes it rather than sneaking past the rule log_food kept.
       //
       // Refusing it quietly is the trap. The item usually held 0 protein
@@ -145,9 +172,8 @@ async function editFood(input) {
       // says 0. There is no list on screen here to contradict it, so the
       // refusal has to be said out loud.
       if (e.protein !== undefined) {
-        const complete = e.protein_source === 'complete';
-        it.p = complete ? clamp0(r1(e.protein)) : 0;
-        if (!complete && (Number(e.protein) || 0) > 0) zeroed.push(it.name);
+        it.p = storedProtein(e.protein_source, it.name, e.protein, it.cal, it.f, it.c);
+        if (it.p === 0 && (Number(e.protein) || 0) > 0) zeroed.push(it.name);
       }
 
       // An edit that sets every field to what it already held changed nothing.
