@@ -12,6 +12,7 @@ const os = require('os');
 const { PROVIDER_NAME, provider, API_KEY } = require('./config/providers');
 const { passphraseRequired } = require('./http/auth');
 const { store, importFileLog } = require('./store');
+const { SELF_URL, EVERY_MS } = require('./keep-awake');
 
 function lanAddress() {
   for (const list of Object.values(os.networkInterfaces())) {
@@ -54,6 +55,9 @@ async function printBanner(port) {
   } else {
     console.log('  Access:    OPEN to anyone who can reach this address.');
     console.log('             Fine on home Wi-Fi. Set PASSPHRASE in .env before hosting this.');
+  }
+  if (SELF_URL) {
+    console.log('  Awake:     pinging ' + SELF_URL + ' every ' + EVERY_MS / 60000 + ' min (free plan sleeps after 15)');
   }
   console.log('');
   console.log('  Ctrl+C to stop.');

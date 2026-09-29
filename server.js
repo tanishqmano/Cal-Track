@@ -21,7 +21,7 @@
  *   src/http/     responses, the passphrase gate, static files, the route map
  *   src/routes/   one file per endpoint
  *   src/mcp/      the connector's tools: what they are, and what they do
- *   src/          the token meter and the startup banner
+ *   src/          the token meter, the startup banner, the keep-awake ping
  *
  * This file stays at the root and stays thin: `node server.js` is the start
  * command on the host, so moving it would mean editing the deploy too.
@@ -29,8 +29,12 @@
 
 const { createServer } = require('./src/http/router');
 const { printBanner } = require('./src/banner');
+const { startKeepAwake } = require('./src/keep-awake');
 
 const PORT = Number(process.env.PORT || 8765);
 const HOST = process.env.HOST || '0.0.0.0';
 
-createServer().listen(PORT, HOST, () => printBanner(PORT));
+createServer().listen(PORT, HOST, () => {
+  startKeepAwake();
+  printBanner(PORT);
+});
