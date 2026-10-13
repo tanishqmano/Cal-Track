@@ -22,11 +22,11 @@ const MEALS = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];
 // note lives on why the macros are personal goals and the micronutrients are
 // the US RDAs. Needed here so set_targets can write a complete targets object;
 // see fillTargets() for why a partial one is unsafe.
-const DEFAULT_TARGETS = { cal: 2500, p: 130, f: 75, c: 325, zn: 11, fe: 8, mg: 400, vc: 90 };
+const DEFAULT_TARGETS = { cal: 2500, p: 130, f: 75, c: 325, fb: 38, zn: 11, fe: 8, mg: 400, vc: 90 };
 
 // Which targets are worth a decimal place, from TARGET_FIELDS in the same
 // file: 17.5 mg of zinc is a real setting, 2150.5 kcal is not.
-const TARGET_DEC = { cal: false, p: false, f: false, c: false, zn: true, fe: true, mg: false, vc: true };
+const TARGET_DEC = { cal: false, p: false, f: false, c: false, fb: false, zn: true, fe: true, mg: false, vc: true };
 
 // Render runs in UTC; the person eating does not. Without this, dinner at 8pm
 // in Los Angeles arrives at 03:00 UTC the NEXT day and gets filed under
@@ -124,7 +124,7 @@ function fillTargets(state) {
 /* ------------------------------------------------------------------ totals -- */
 
 function totalsFor(day) {
-  const t = { cal: 0, p: 0, f: 0, c: 0, zn: 0, fe: 0, mg: 0, vc: 0 };
+  const t = { cal: 0, p: 0, f: 0, c: 0, fb: 0, zn: 0, fe: 0, mg: 0, vc: 0 };
   for (const it of day.items) for (const k of Object.keys(t)) t[k] += Number(it[k]) || 0;
   for (const k of Object.keys(t)) t[k] = k === 'cal' ? Math.round(t[k]) : r1(t[k]);
   return t;
@@ -132,7 +132,7 @@ function totalsFor(day) {
 
 const totalsLine = day => {
   const t = totalsFor(day);
-  return `Day total now ${t.cal} kcal | P ${t.p} | F ${t.f} | C ${t.c} | Zn ${t.zn} | Fe ${t.fe} | Mg ${t.mg} | VitC ${t.vc}.`;
+  return `Day total now ${t.cal} kcal | P ${t.p} | F ${t.f} | C ${t.c} | Fiber ${t.fb} | Zn ${t.zn} | Fe ${t.fe} | Mg ${t.mg} | VitC ${t.vc}.`;
 };
 
 /* -------------------------------------------------------------- selecting -- */

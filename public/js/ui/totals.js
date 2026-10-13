@@ -30,7 +30,7 @@ function microBlock(m, used) {
   const pct = Math.min(100, (used / target) * 100);
   const done = used >= target;
   return `
-    <div class="ms">
+    <div class="ms ms-${m.k}">
       <div class="ms-top">
         <span class="ms-name">${m.name}</span>
         <span class="num"><b>${g(used)}</b><span class="ms-t">/${target}</span></span>

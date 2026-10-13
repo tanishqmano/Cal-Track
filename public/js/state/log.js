@@ -84,6 +84,6 @@ export function normalizeState() {
 export function dayTotals() {
   const items = day().items;
   const t = { cal: sumCal(items) };
-  for (const k of ['p', 'f', 'c', 'zn', 'fe', 'mg', 'vc']) t[k] = sumG(items, k);
+  for (const k of ['p', 'f', 'c', 'fb', 'zn', 'fe', 'mg', 'vc']) t[k] = sumG(items, k);
   return t;
 }

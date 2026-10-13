@@ -1,4 +1,4 @@
-/* The eight target boxes under Settings. */
+/* The nine target boxes under Settings. */
 
 import { $ } from '../lib/dom.js';
 import { TARGET_FIELDS } from '../config/nutrition.js';

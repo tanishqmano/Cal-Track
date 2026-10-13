@@ -1,7 +1,7 @@
 /* Rows pasted back in from the app's own list.
  *
- * ui/list.js draws each item as a name, four numbers, a "Zn · Fe · Mg · C"
- * line, and the ✎ ✕ buttons. Selecting a row on screen and pasting it into the
+ * ui/list.js draws each item as a name, four numbers, a "Fibre · Zn · Fe · Mg
+ * · C" line, and the ✎ ✕ buttons. Selecting a row on screen and pasting it into the
  * box is the quickest way to repeat a food, and what arrives already carries
  * every number — there is nothing left to estimate.
  *
@@ -30,8 +30,9 @@ const GLYPH = /^[✎✕✏✖×xX]$/;
 // Longer alternatives first: alternation takes the first that matches.
 const NUM_LINE = /^(?:kcal|calories|calorie|cals|cal|protein|prot|carbs|carb|fat|p|f|c)?\s*[:·|]?\s*(-?\d+(?:\.\d+)?)\s*(?:kcal|cal|g|gm|grams?)?$/i;
 
-// The quieter second line under a row.
-const MICRO_LINE = /^zn\s*(-?\d+(?:\.\d+)?).*?fe\s*(-?\d+(?:\.\d+)?).*?mg\s*(-?\d+(?:\.\d+)?).*?(?:vit\s*c|vitc|c)\s*(-?\d+(?:\.\d+)?)/i;
+// The quieter second line under a row. Fibre is optional so a row copied
+// before it was tracked still reads, and comes in at 0 like any old item.
+const MICRO_LINE = /^(?:fib(?:re|er)?\s*(-?\d+(?:\.\d+)?)\D*?)?zn\s*(-?\d+(?:\.\d+)?).*?fe\s*(-?\d+(?:\.\d+)?).*?mg\s*(-?\d+(?:\.\d+)?).*?(?:vit\s*c|vitc|c)\s*(-?\d+(?:\.\d+)?)/i;
 
 // A meal subtotal ("452 kcal · P 26 · F 12.2 · C 59") is not an item.
 const MEAL_SUB = /\bkcal\b[^\n]*·/i;
@@ -66,7 +67,7 @@ function rowAt(lines, i) {
 
   let micro = null;
   const mm = j < lines.length ? MICRO_LINE.exec(lines[j]) : null;
-  if (mm) { micro = mm.slice(1, 5).map(Number); j++; }
+  if (mm) { micro = mm.slice(1, 6).map(v => Number(v) || 0); j++; }
 
   let glyphs = 0;
   while (j < lines.length && GLYPH.test(lines[j])) { glyphs++; j++; }
@@ -82,8 +83,9 @@ function rowAt(lines, i) {
       name: lines[i],
       cal: clamp0(r0(nums[0])), p: clamp0(r1(nums[1])),
       f: clamp0(r1(nums[2])), c: clamp0(r1(nums[3])),
-      zn: micro ? clamp0(r1(micro[0])) : 0, fe: micro ? clamp0(r1(micro[1])) : 0,
-      mg: micro ? clamp0(r0(micro[2])) : 0, vc: micro ? clamp0(r1(micro[3])) : 0
+      fb: micro ? clamp0(r1(micro[0])) : 0,
+      zn: micro ? clamp0(r1(micro[1])) : 0, fe: micro ? clamp0(r1(micro[2])) : 0,
+      mg: micro ? clamp0(r0(micro[3])) : 0, vc: micro ? clamp0(r1(micro[4])) : 0
     }
   };
 }
@@ -136,7 +138,7 @@ export function asksAQuestion(rest) {
 // The rows as a sentence, for the times the model does need to see them.
 export function describeCards(items) {
   return items.map(i =>
-    `${i.name} — ${i.cal} kcal, P ${i.p} g, F ${i.f} g, C ${i.c} g, ` +
+    `${i.name} — ${i.cal} kcal, P ${i.p} g, F ${i.f} g, C ${i.c} g, Fiber ${i.fb} g, ` +
     `Zn ${i.zn} mg, Fe ${i.fe} mg, Mg ${i.mg} mg, VitC ${i.vc} mg`);
 }
 

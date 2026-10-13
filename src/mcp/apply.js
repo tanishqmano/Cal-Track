@@ -22,7 +22,7 @@ const {
 } = require('./log');
 
 // The friendly names the tools take, mapped to the short keys the log stores.
-const TARGET_KEYS = { calories: 'cal', protein: 'p', fat: 'f', carbs: 'c', zinc: 'zn', iron: 'fe', magnesium: 'mg', vitamin_c: 'vc' };
+const TARGET_KEYS = { calories: 'cal', protein: 'p', fat: 'f', carbs: 'c', fiber: 'fb', zinc: 'zn', iron: 'fe', magnesium: 'mg', vitamin_c: 'vc' };
 
 // Said whenever a tool writes into a day other than the open one, so a mistake
 // about which day is being changed surfaces in Claude's reply instead of being
@@ -77,6 +77,7 @@ async function logFood(input) {
     p: storedProtein(it.protein_source, it.name, it.protein, it.calories, it.fat, it.carbs),
     f: clamp0(r1(it.fat)),
     c: clamp0(r1(it.carbs)),
+    fb: clamp0(r1(it.fiber)),
     zn: clamp0(r1(it.zinc)),
     fe: clamp0(r1(it.iron)),
     mg: clamp0(r0(it.magnesium)),
@@ -122,15 +123,15 @@ async function readLog(input) {
   const g = fillTargets(state);
 
   const lines = day.items.length
-    ? day.items.map(i => `- [${i.id}] ${i.meal} | ${i.name} | ${i.cal} kcal | P ${i.p} | F ${i.f} | C ${i.c} | Zn ${i.zn} | Fe ${i.fe} | Mg ${i.mg} | VitC ${i.vc}`).join('\n')
+    ? day.items.map(i => `- [${i.id}] ${i.meal} | ${i.name} | ${i.cal} kcal | P ${i.p} | F ${i.f} | C ${i.c} | Fiber ${i.fb || 0} | Zn ${i.zn} | Fe ${i.fe} | Mg ${i.mg} | VitC ${i.vc}`).join('\n')
     : '(nothing logged yet)';
 
   return [
     `${day.label} (position ${sel.idx + 1} of ${state.days.length}${sel.idx === state.active ? ', the day the tracker is open on' : ''}).`,
-    'Grams: P protein, F fat, C carbs. Milligrams: Zn, Fe, Mg, VitC.',
-    `Targets:   ${g.cal} kcal | P ${g.p} | F ${g.f} | C ${g.c} | Zn ${g.zn} | Fe ${g.fe} | Mg ${g.mg} | VitC ${g.vc}`,
-    `Logged:    ${t.cal} kcal | P ${t.p} | F ${t.f} | C ${t.c} | Zn ${t.zn} | Fe ${t.fe} | Mg ${t.mg} | VitC ${t.vc}`,
-    `Remaining: ${r1(g.cal - t.cal)} kcal | P ${r1(g.p - t.p)} | F ${r1(g.f - t.f)} | C ${r1(g.c - t.c)} | Zn ${r1(g.zn - t.zn)} | Fe ${r1(g.fe - t.fe)} | Mg ${r1(g.mg - t.mg)} | VitC ${r1(g.vc - t.vc)}`,
+    'Grams: P protein, F fat, C carbs, Fiber (part of C, not on top of it). Milligrams: Zn, Fe, Mg, VitC.',
+    `Targets:   ${g.cal} kcal | P ${g.p} | F ${g.f} | C ${g.c} | Fiber ${g.fb} | Zn ${g.zn} | Fe ${g.fe} | Mg ${g.mg} | VitC ${g.vc}`,
+    `Logged:    ${t.cal} kcal | P ${t.p} | F ${t.f} | C ${t.c} | Fiber ${t.fb} | Zn ${t.zn} | Fe ${t.fe} | Mg ${t.mg} | VitC ${t.vc}`,
+    `Remaining: ${r1(g.cal - t.cal)} kcal | P ${r1(g.p - t.p)} | F ${r1(g.f - t.f)} | C ${r1(g.c - t.c)} | Fiber ${r1(g.fb - t.fb)} | Zn ${r1(g.zn - t.zn)} | Fe ${r1(g.fe - t.fe)} | Mg ${r1(g.mg - t.mg)} | VitC ${r1(g.vc - t.vc)}`,
     'Items:',
     lines
   ].join('\n');
@@ -157,6 +158,7 @@ async function editFood(input) {
       if (e.calories !== undefined) it.cal = clamp0(r0(e.calories));
       if (e.fat !== undefined) it.f = clamp0(r1(e.fat));
       if (e.carbs !== undefined) it.c = clamp0(r1(e.carbs));
+      if (e.fiber !== undefined) it.fb = clamp0(r1(e.fiber));
       if (e.zinc !== undefined) it.zn = clamp0(r1(e.zinc));
       if (e.iron !== undefined) it.fe = clamp0(r1(e.iron));
       if (e.magnesium !== undefined) it.mg = clamp0(r0(e.magnesium));
@@ -349,7 +351,7 @@ async function setTargets(input) {
     state.targetsAt = Date.now();
     return { changed: true, text:
       `Targets updated on every device: ${set.join(', ')}.${note} ` +
-      `Now ${next.cal} kcal | P ${next.p} | F ${next.f} | C ${next.c} | Zn ${next.zn} | Fe ${next.fe} | Mg ${next.mg} | VitC ${next.vc}.` };
+      `Now ${next.cal} kcal | P ${next.p} | F ${next.f} | C ${next.c} | Fiber ${next.fb} | Zn ${next.zn} | Fe ${next.fe} | Mg ${next.mg} | VitC ${next.vc}.` };
   });
 }
 

@@ -12,15 +12,24 @@
 // Micronutrients are the US RDAs for an adult man 19-50.
 // Adult woman: zn 8, fe 18, mg 310, vc 75.
 //
+// Fibre is the US Adequate Intake for the same man, 38 g (woman: 25 g). It is
+// a share of the carbs, not something on top of them — a US label lists
+// Dietary Fiber under Total Carbohydrate — so it does not touch the
+// calorie arithmetic above.
+//
 // These used to be the ICMR-NIN 2020 Indian numbers (zn 17, fe 19, mg 440),
 // which run higher on purpose: a rice/dal/millet diet is heavy in phytate,
 // which blocks zinc and iron, so more has to go in for enough to be absorbed.
 // A US diet has far less phytate and far more meat and fortified grain, so the
 // US figures are the right bar here. Go back to the Indian ones if the cooking
 // goes back to being mostly rice, dal and millet.
-export const DEFAULT_TARGETS = { cal: 2500, p: 130, f: 75, c: 325, zn: 11, fe: 8, mg: 400, vc: 90 };
+export const DEFAULT_TARGETS = { cal: 2500, p: 130, f: 75, c: 325, fb: 38, zn: 11, fe: 8, mg: 400, vc: 90 };
 
+// Everything measured against a floor rather than a ceiling: falling short is
+// the problem, going over is fine. Fibre is not a micronutrient, but it works
+// the same way, so it rides in the same strip and gets the same "low" note.
 export const MICROS = [
+  { k: 'fb', name: 'Fibre',     unit: 'g'  },
   { k: 'zn', name: 'Zinc',      unit: 'mg' },
   { k: 'fe', name: 'Iron',      unit: 'mg' },
   { k: 'mg', name: 'Magnesium', unit: 'mg' },
@@ -37,7 +46,9 @@ export const TARGET_FIELDS = [
 ].concat(MICROS.map(m => ({
   k: m.k, name: m.name, unit: m.unit,
   step: m.k === 'mg' ? 10 : 1,
-  dec: m.k !== 'mg'
+  // Grams are whole numbers, like the macros above. Of the milligrams, only
+  // magnesium runs large enough not to need the decimal.
+  dec: m.unit === 'mg' && m.k !== 'mg'
 })));
 
 export const MEALS = ['Breakfast', 'Lunch', 'Snack', 'Dinner'];

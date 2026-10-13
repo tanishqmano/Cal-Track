@@ -21,6 +21,7 @@ const ITEM_FIELDS = {
   protein: { type: 'number', description: 'Protein in grams. Stored as 0 unless protein_source is "complete".' },
   fat: { type: 'number', description: 'Fat in grams for the quantity described.' },
   carbs: { type: 'number', description: 'Carbohydrate in grams for the quantity described.' },
+  fiber: { type: 'number', description: 'Dietary fiber in grams. Part of carbs, not extra — leave carbs as the total. Counts from plant foods in full, beans and dals included; 0 for meat, fish, egg, dairy, oil and sugar.' },
   protein_source: { type: 'string', enum: ['complete', 'incomplete', 'none'], description: 'Whether the protein in this food comes from a complete source. Grains, bread, pasta, beans, dals, tofu and nuts are "incomplete".' },
   zinc: { type: 'number', description: 'Zinc in mg. Counts from plant foods too.' },
   iron: { type: 'number', description: 'Iron in mg. Counts from plant foods too.' },
@@ -53,7 +54,7 @@ const LOG_FOOD = {
         items: {
           type: 'object',
           properties: ITEM_FIELDS,
-          required: ['name', 'calories', 'protein', 'fat', 'carbs', 'protein_source', 'zinc', 'iron', 'magnesium', 'vitamin_c', 'meal']
+          required: ['name', 'calories', 'protein', 'fat', 'carbs', 'fiber', 'protein_source', 'zinc', 'iron', 'magnesium', 'vitamin_c', 'meal']
         }
       },
       label: DAY_PICKER.label,
@@ -172,6 +173,7 @@ const SET_TARGETS = {
       protein: { type: 'number', description: 'Daily protein target in grams.' },
       fat: { type: 'number', description: 'Daily fat target in grams.' },
       carbs: { type: 'number', description: 'Daily carbohydrate target in grams.' },
+      fiber: { type: 'number', description: 'Daily fiber target in grams.' },
       zinc: { type: 'number', description: 'Daily zinc target in mg.' },
       iron: { type: 'number', description: 'Daily iron target in mg.' },
       magnesium: { type: 'number', description: 'Daily magnesium target in mg.' },

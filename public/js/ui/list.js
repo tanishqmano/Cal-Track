@@ -16,11 +16,12 @@ function numsHtml(cal, p, f, c) {
   </div>`;
 }
 
-// Second, quieter line. Omitted entirely when a food has no minerals worth
-// showing (oil, sugar) so rows stay short.
+// Second, quieter line. Omitted entirely when a food has no fibre or minerals
+// worth showing (oil, sugar) so rows stay short. Each pair is kept whole so a
+// narrow phone wraps between them rather than splitting "Mg" from its number.
 function microHtml(it) {
-  if (!(it.zn || it.fe || it.mg || it.vc)) return '';
-  return `<div class="micro num">Zn ${g(it.zn)} · Fe ${g(it.fe)} · Mg ${g(it.mg)} · C ${g(it.vc)}</div>`;
+  if (!(it.fb || it.zn || it.fe || it.mg || it.vc)) return '';
+  return `<div class="micro num"><span>Fibre ${g(it.fb)}</span> · <span>Zn ${g(it.zn)}</span> · <span>Fe ${g(it.fe)}</span> · <span>Mg ${g(it.mg)}</span> · <span>C ${g(it.vc)}</span></div>`;
 }
 
 function rowHtml(it) {
@@ -32,6 +33,7 @@ function rowHtml(it) {
         <label class="fld">P <input class="num-in" data-e="p" type="number" step="0.1" min="0" value="${it.p}"></label>
         <label class="fld">F <input class="num-in" data-e="f" type="number" step="0.1" min="0" value="${it.f}"></label>
         <label class="fld">C <input class="num-in" data-e="c" type="number" step="0.1" min="0" value="${it.c}"></label>
+        <label class="fld">Fibre <input class="num-in" data-e="fb" type="number" step="0.1" min="0" value="${it.fb}"></label>
         <label class="fld">Zn <input class="num-in" data-e="zn" type="number" step="0.1" min="0" value="${it.zn}"></label>
         <label class="fld">Fe <input class="num-in" data-e="fe" type="number" step="0.1" min="0" value="${it.fe}"></label>
         <label class="fld">Mg <input class="num-in" data-e="mg" type="number" step="1" min="0" value="${it.mg}"></label>
@@ -70,12 +72,13 @@ export function renderList() {
   for (const meal of MEALS) {
     const group = items.filter(i => i.meal === meal);
     if (!group.length) continue;
-    const zn = sumG(group, 'zn'), fe = sumG(group, 'fe'), mgm = sumG(group, 'mg'), vc = sumG(group, 'vc');
+    const fb = sumG(group, 'fb'), zn = sumG(group, 'zn'), fe = sumG(group, 'fe'), mgm = sumG(group, 'mg'), vc = sumG(group, 'vc');
+    const sub = [`${g(sumCal(group))} kcal`, `P ${g(sumG(group, 'p'))}`, `F ${g(sumG(group, 'f'))}`, `C ${g(sumG(group, 'c'))}`];
+    if (fb || zn || fe || mgm || vc) sub.push(`Fibre ${g(fb)}`, `Zn ${g(zn)}`, `Fe ${g(fe)}`, `Mg ${g(mgm)}`, `C ${g(vc)}`);
     html += `<div class="meal">
       <div class="meal-head">
         <div class="meal-name">${meal}</div>
-        <div class="meal-sub num">${g(sumCal(group))} kcal · P ${g(sumG(group, 'p'))} · F ${g(sumG(group, 'f'))} · C ${g(sumG(group, 'c'))}${
-          (zn || fe || mgm || vc) ? `<span class="meal-min"> · Zn ${g(zn)} · Fe ${g(fe)} · Mg ${g(mgm)} · C ${g(vc)}</span>` : ''}</div>
+        <div class="meal-sub num">${sub.map(s => `<span>${s}</span>`).join(' · ')}</div>
       </div>
       ${group.map(rowHtml).join('')}
     </div>`;

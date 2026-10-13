@@ -20,13 +20,13 @@ export function stateBlock() {
   const items = day().items;
   const t = dayTotals();
   const lines = items.length
-    ? items.map(i => `- [${i.id}] ${i.meal} | ${i.name} | ${i.cal} kcal | P ${g(i.p)} | F ${g(i.f)} | C ${g(i.c)} | Zn ${g(i.zn)} | Fe ${g(i.fe)} | Mg ${g(i.mg)} | VitC ${g(i.vc)}`).join('\n')
+    ? items.map(i => `- [${i.id}] ${i.meal} | ${i.name} | ${i.cal} kcal | P ${g(i.p)} | F ${g(i.f)} | C ${g(i.c)} | Fiber ${g(i.fb)} | Zn ${g(i.zn)} | Fe ${g(i.fe)} | Mg ${g(i.mg)} | VitC ${g(i.vc)}`).join('\n')
     : '(nothing logged yet)';
   return `<current_log day="${day().label}" default_meal="${defaultMeal()}">
-Grams: P protein, F fat, C carbs. Milligrams: Zn zinc, Fe iron, Mg magnesium, VitC vitamin C.
-Targets:   ${TARGETS.cal} kcal | P ${TARGETS.p} | F ${TARGETS.f} | C ${TARGETS.c} | Zn ${TARGETS.zn} | Fe ${TARGETS.fe} | Mg ${TARGETS.mg} | VitC ${TARGETS.vc}
-Logged:    ${t.cal} kcal | P ${g(t.p)} | F ${g(t.f)} | C ${g(t.c)} | Zn ${g(t.zn)} | Fe ${g(t.fe)} | Mg ${g(t.mg)} | VitC ${g(t.vc)}
-Remaining: ${g(TARGETS.cal - t.cal)} kcal | P ${g(TARGETS.p - t.p)} | F ${g(TARGETS.f - t.f)} | C ${g(TARGETS.c - t.c)} | Zn ${g(TARGETS.zn - t.zn)} | Fe ${g(TARGETS.fe - t.fe)} | Mg ${g(TARGETS.mg - t.mg)} | VitC ${g(TARGETS.vc - t.vc)}
+Grams: P protein, F fat, C carbs, Fiber (part of C, not on top of it). Milligrams: Zn zinc, Fe iron, Mg magnesium, VitC vitamin C.
+Targets:   ${TARGETS.cal} kcal | P ${TARGETS.p} | F ${TARGETS.f} | C ${TARGETS.c} | Fiber ${TARGETS.fb} | Zn ${TARGETS.zn} | Fe ${TARGETS.fe} | Mg ${TARGETS.mg} | VitC ${TARGETS.vc}
+Logged:    ${t.cal} kcal | P ${g(t.p)} | F ${g(t.f)} | C ${g(t.c)} | Fiber ${g(t.fb)} | Zn ${g(t.zn)} | Fe ${g(t.fe)} | Mg ${g(t.mg)} | VitC ${g(t.vc)}
+Remaining: ${g(TARGETS.cal - t.cal)} kcal | P ${g(TARGETS.p - t.p)} | F ${g(TARGETS.f - t.f)} | C ${g(TARGETS.c - t.c)} | Fiber ${g(TARGETS.fb - t.fb)} | Zn ${g(TARGETS.zn - t.zn)} | Fe ${g(TARGETS.fe - t.fe)} | Mg ${g(TARGETS.mg - t.mg)} | VitC ${g(TARGETS.vc - t.vc)}
 Items:
 ${lines}
 </current_log>`;
@@ -36,8 +36,8 @@ ${lines}
 // arithmetic rather than its own.
 export function totalsLine() {
   const t = dayTotals();
-  return `Day total now ${t.cal} kcal | P ${g(t.p)} | F ${g(t.f)} | C ${g(t.c)} | ` +
+  return `Day total now ${t.cal} kcal | P ${g(t.p)} | F ${g(t.f)} | C ${g(t.c)} | Fiber ${g(t.fb)} | ` +
          `Zn ${g(t.zn)} | Fe ${g(t.fe)} | Mg ${g(t.mg)} | VitC ${g(t.vc)}. ` +
-         `Remaining ${g(TARGETS.cal - t.cal)} kcal | P ${g(TARGETS.p - t.p)} | F ${g(TARGETS.f - t.f)} | C ${g(TARGETS.c - t.c)} | ` +
+         `Remaining ${g(TARGETS.cal - t.cal)} kcal | P ${g(TARGETS.p - t.p)} | F ${g(TARGETS.f - t.f)} | C ${g(TARGETS.c - t.c)} | Fiber ${g(TARGETS.fb - t.fb)} | ` +
          `Zn ${g(TARGETS.zn - t.zn)} | Fe ${g(TARGETS.fe - t.fe)} | Mg ${g(TARGETS.mg - t.mg)} | VitC ${g(TARGETS.vc - t.vc)}.`;
 }

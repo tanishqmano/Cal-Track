@@ -27,13 +27,14 @@ export const LOG_TOOL = {
             protein: { type: 'number', description: 'The food\'s real protein in grams for the quantity described, even when protein_source is "incomplete" — never zero it yourself; the app stores it as 0 for sources that are not complete. For a mixed dish, only the protein from its complete-source ingredients.' },
             fat: { type: 'number', description: 'Fat in grams for the quantity described.' },
             carbs: { type: 'number', description: 'Carbohydrate in grams for the quantity described.' },
+            fiber: { type: 'number', description: 'Dietary fiber in grams for the quantity described. Part of carbs, not extra — leave carbs as the total. 0 for meat, fish, egg, dairy, oil and sugar.' },
             zinc: { type: 'number', description: 'Zinc in mg for the quantity described. Counts from plant foods too.' },
             iron: { type: 'number', description: 'Iron in mg for the quantity described. Counts from plant foods too.' },
             magnesium: { type: 'number', description: 'Magnesium in mg for the quantity described. Counts from plant foods too.' },
             vitamin_c: { type: 'number', description: 'Vitamin C in mg AFTER the cooking loss for how this food was prepared. 0 for all grains, bread, pasta, beans, dals, nuts, meat, fish, egg, dairy and fats.' },
             meal: { type: 'string', enum: MEALS, description: 'Required. If the user named a meal anywhere in their message ("for breakfast", "at lunch", "dinner was"), use that one. Only fall back to default_meal from <current_log> when they named none.' }
           },
-          required: ['name', 'calories', 'protein_source', 'protein', 'fat', 'carbs', 'zinc', 'iron', 'magnesium', 'vitamin_c', 'meal']
+          required: ['name', 'calories', 'protein_source', 'protein', 'fat', 'carbs', 'fiber', 'zinc', 'iron', 'magnesium', 'vitamin_c', 'meal']
         }
       }
     },
@@ -59,6 +60,7 @@ export const EDIT_TOOL = {
             protein: { type: 'number', description: 'Only send if protein changes: the food\'s real protein, never zeroed yourself.' },
             fat: { type: 'number' },
             carbs: { type: 'number' },
+            fiber: { type: 'number', description: 'New fiber in grams. Send whenever the quantity or the food changes.' },
             zinc: { type: 'number', description: 'New zinc in mg. Send whenever the quantity or the food changes.' },
             iron: { type: 'number', description: 'New iron in mg. Send whenever the quantity or the food changes.' },
             magnesium: { type: 'number', description: 'New magnesium in mg. Send whenever the quantity or the food changes.' },

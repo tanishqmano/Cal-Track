@@ -41,6 +41,7 @@ export function onListClick(e) {
     it.p = clamp0(r1(get('p').value));
     it.f = clamp0(r1(get('f').value));
     it.c = clamp0(r1(get('c').value));
+    it.fb = clamp0(r1(get('fb').value));
     it.zn = clamp0(r1(get('zn').value));
     it.fe = clamp0(r1(get('fe').value));
     it.mg = clamp0(r0(get('mg').value));

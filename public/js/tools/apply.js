@@ -26,6 +26,7 @@ const ALIAS = {
   protein: ['protein', 'protein_g', 'prot'],
   fat: ['fat', 'fat_g'],
   carbs: ['carbs', 'carbohydrate', 'carbohydrates', 'carb', 'carbs_g'],
+  fiber: ['fiber', 'fibre', 'fiber_g', 'fibre_g', 'dietary_fiber', 'fb'],
   zinc: ['zinc', 'zn'],
   iron: ['iron', 'fe'],
   magnesium: ['magnesium', 'magnesium_mg', 'mg'],
@@ -113,7 +114,9 @@ function readItem(raw, fallbackMeal) {
       p: storedProtein(raw.protein_source, name, field(raw, 'protein'), cal, fat, carbs),
       f: clamp0(r1(fat)),
       c: clamp0(r1(carbs)),
-      // Micros count from every food, plant included — no source rule here.
+      // Fibre and micros count from every food, plant included — no source
+      // rule here.
+      fb: clamp0(r1(field(raw, 'fiber'))),
       zn: clamp0(r1(field(raw, 'zinc'))),
       fe: clamp0(r1(field(raw, 'iron'))),
       mg: clamp0(r0(field(raw, 'magnesium'))),
@@ -134,7 +137,7 @@ function itemList(input) {
 }
 
 const RESEND = 'Each item needs a "name" string and a "calories" number, alongside ' +
-  'protein, protein_source, fat, carbs, zinc, iron, magnesium, vitamin_c and meal. ' +
+  'protein, protein_source, fat, carbs, fiber, zinc, iron, magnesium, vitamin_c and meal. ' +
   'Send log_items again with a complete object per item.';
 
 function applyLogItems(input) {
@@ -182,6 +185,7 @@ function applyEditItems(input) {
     if (e.calories !== undefined) it.cal = clamp0(r0(e.calories));
     if (e.fat !== undefined) it.f = clamp0(r1(e.fat));
     if (e.carbs !== undefined) it.c = clamp0(r1(e.carbs));
+    if (e.fiber !== undefined) it.fb = clamp0(r1(e.fiber));
     if (e.zinc !== undefined) it.zn = clamp0(r1(e.zinc));
     if (e.iron !== undefined) it.fe = clamp0(r1(e.iron));
     if (e.magnesium !== undefined) it.mg = clamp0(r0(e.magnesium));
