@@ -20,6 +20,12 @@ function retryDelayMs(data) {
 
 const MAX_RETRIES = 2;
 
+// "Busy" is a 5xx: Gemini's "This model is currently experiencing high demand"
+// is a 503. It usually clears in seconds, so it gets one more go than a quota
+// does, and waits a little longer each time.
+const MAX_BUSY_RETRIES = 3;
+const busyDelayMs = attempt => 2000 * (attempt + 1);
+
 export async function callApi(messages) {
   const body = JSON.stringify(buildPayload(messages));
 
@@ -63,10 +69,15 @@ export async function callApi(messages) {
     // our passphrase gate means someone is guessing, and retrying that would
     // help them do it. In direct mode there is no gate, so 429 can only be the
     // provider. `x-upstream` is what separates the two when proxied.
-    const throttled = res.status === 429 && (!serverMode || res.headers.get('x-upstream'));
-    if (throttled && attempt < MAX_RETRIES) {
-      const wait = retryDelayMs(data);
-      showMsg('Rate limit reached. Retrying in ' + Math.round(wait / 1000) + 's…', true);
+    const upstream = !serverMode || res.headers.get('x-upstream');
+    const throttled = res.status === 429 && upstream;
+    // Same rule for busy: only the provider's own 5xx. Ours means no key in
+    // .env, and waiting will not put one there.
+    const overloaded = res.status >= 500 && upstream;
+    if ((throttled && attempt < MAX_RETRIES) || (overloaded && attempt < MAX_BUSY_RETRIES)) {
+      const wait = throttled ? retryDelayMs(data) : busyDelayMs(attempt);
+      showMsg((throttled ? 'Rate limit reached' : 'The AI is busy right now') +
+              '. Retrying in ' + Math.round(wait / 1000) + 's…', true);
       await sleep(wait);
       continue;
     }

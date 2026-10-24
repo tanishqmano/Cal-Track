@@ -26,8 +26,13 @@ function buildMessages(ask) {
   // 8 is deliberate. stateBlock() already carries the whole current log, so
   // history is only needed to resolve "the other one" style references across
   // a couple of turns. Sending more just re-pays for facts already in state.
-  const msgs = day().chat
-    .filter(m => m.role === 'user' || m.role === 'assistant')
+  const chat = day().chat.filter(m => m.role === 'user' || m.role === 'assistant');
+  const msgs = chat
+    // A message that never got a reply is one whose turn failed. Sent again as
+    // history it reads as a request still waiting, and "165 g milk" typed
+    // twice after an error comes back as two glasses. Whatever it did manage to
+    // log is already in stateBlock(), so dropping it loses nothing.
+    .filter((m, i) => m.role === 'assistant' || i === chat.length - 1 || chat[i + 1].role === 'assistant')
     .slice(-8)
     .map(m => ({ role: m.role, content: m.text }));
 
@@ -142,9 +147,20 @@ export async function send() {
     }
   } catch (e) {
     const m = String(e && e.message || e);
-    showMsg(/Failed to fetch|NetworkError/i.test(m)
+    const why = /Failed to fetch|NetworkError/i.test(m)
       ? 'Could not reach the API. Check your connection and that the key is valid.'
-      : m);
+      : m;
+    // Nothing went in, so the message goes back in the box rather than sitting
+    // in the chat looking sent. Pressing Undo is not the way to retry: it
+    // steps back the turn before this one, which did work.
+    const chat = day().chat, last = chat[chat.length - 1];
+    if (!touched && last && last.role === 'user' && last.text === text && !$('say').value) {
+      chat.pop();
+      $('say').value = text;
+      showMsg(why + ' Nothing was logged — your message is back in the box. Press send to try again.');
+    } else {
+      showMsg(why);
+    }
   } finally {
     setBusy(false);
     // One entry per turn, however many tool calls it made — the user thinks in

@@ -10,7 +10,7 @@
 
 const { json } = require('../http/respond');
 const { passphraseRequired, authorized } = require('../http/auth');
-const { PROVIDER_NAME, provider, API_KEY } = require('../config/providers');
+const { PROVIDER_NAME, provider, API_KEY, FALLBACK_MODEL } = require('../config/providers');
 const { store } = require('../store');
 const { meter } = require('../meter');
 
@@ -35,6 +35,7 @@ function health(req, res) {
     provider: PROVIDER_NAME,
     format: provider.format,
     model: provider.model,
+    fallback: FALLBACK_MODEL || null,
     // Sits behind the passphrase like everything else, and a browser address
     // bar cannot send that header — so this is for the page itself and for
     // curl, not for typing the URL in on your phone.
