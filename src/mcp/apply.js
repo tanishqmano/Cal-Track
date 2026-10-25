@@ -58,23 +58,17 @@ function storedProtein(source, name, protein, cal, fat, carbs) {
   return clamp0(r1(protein));
 }
 
-async function logFood(input) {
-  const raw = (input && input.items) || [];
-  if (!Array.isArray(raw) || !raw.length) return 'No items were provided, so nothing was logged.';
-
-  const added = raw.map(it => ({
-    id: uid(),
-    name: String(it.name || 'Item').slice(0, 120),
-    // Left null and filled inside mutate() below, where the state is in hand —
-    // the timezone the meal is guessed from is stored in the log itself now,
-    // so there is nothing to guess with out here.
-    meal: MEALS.includes(it.meal) ? it.meal : null,
+// The tools' field names onto the short keys the log stores, rounded. Shared by
+// log_food and save_food, so a saved food is held to the same rules as a
+// logged one.
+function nutrientsFrom(it, name) {
+  return {
     cal: clamp0(r0(it.calories)),
     // The page enforces this in public/js/tools/apply.js and so must this:
     // protein only counts from a complete source. Letting it through here
     // would put numbers in the log that the app's own rule would have zeroed,
     // and the two ways in would start disagreeing about the same plate.
-    p: storedProtein(it.protein_source, it.name, it.protein, it.calories, it.fat, it.carbs),
+    p: storedProtein(it.protein_source, name, it.protein, it.calories, it.fat, it.carbs),
     f: clamp0(r1(it.fat)),
     c: clamp0(r1(it.carbs)),
     fb: clamp0(r1(it.fiber)),
@@ -82,7 +76,21 @@ async function logFood(input) {
     fe: clamp0(r1(it.iron)),
     mg: clamp0(r0(it.magnesium)),
     vc: clamp0(r1(it.vitamin_c))
-  }));
+  };
+}
+
+async function logFood(input) {
+  const raw = (input && input.items) || [];
+  if (!Array.isArray(raw) || !raw.length) return 'No items were provided, so nothing was logged.';
+
+  const added = raw.map(it => Object.assign({
+    id: uid(),
+    name: String(it.name || 'Item').slice(0, 120),
+    // Left null and filled inside mutate() below, where the state is in hand —
+    // the timezone the meal is guessed from is stored in the log itself now,
+    // so there is nothing to guess with out here.
+    meal: MEALS.includes(it.meal) ? it.meal : null
+  }, nutrientsFrom(it, it.name)));
 
   // Only worth mentioning where protein was actually taken away — paired by
   // position, since two helpings of the same food share a name and matching on
@@ -99,9 +107,20 @@ async function logFood(input) {
       if (!it.meal) it.meal = fallback;
       day.items.push(it);
     }
+
+    // A saved food estimated anyway is the exact drift saving it was meant to
+    // stop, so it is pointed out. Not fixed, though: a label photo of a
+    // different product can share a name, and only the conversation knows.
+    const foods = foodsOf(state);
+    const missed = added.filter(a => foods.some(f => norm(a.name).includes(norm(f.name))));
+
     return { changed: true, text: [
       `Logged ${added.length} item(s) into ${where(state, sel.idx)}: ${added.map(a => `${a.name} (${a.meal})`).join(', ')}.`,
       zeroed.length ? `Protein set to 0 for: ${zeroed.join(', ')} (not complete sources).` : '',
+      missed.length
+        ? `These were estimated, but the user has saved numbers for them: ${missed.map(a => `[${a.id}] ${a.name}`).join(', ')}. ` +
+          'Unless the estimate was deliberate, delete_food those ids and log them with log_saved_food.'
+        : '',
       totalsLine(day)
     ].filter(Boolean).join(' ') };
   });
@@ -126,6 +145,10 @@ async function readLog(input) {
     ? day.items.map(i => `- [${i.id}] ${i.meal} | ${i.name} | ${i.cal} kcal | P ${i.p} | F ${i.f} | C ${i.c} | Fiber ${i.fb || 0} | Zn ${i.zn} | Fe ${i.fe} | Mg ${i.mg} | VitC ${i.vc}`).join('\n')
     : '(nothing logged yet)';
 
+  // read_log is usually the call just before logging, so the saved names are
+  // repeated here — the reminder lands at the moment it is needed.
+  const saved = foodsOf(state).map(f => f.name);
+
   return [
     `${day.label} (position ${sel.idx + 1} of ${state.days.length}${sel.idx === state.active ? ', the day the tracker is open on' : ''}).`,
     'Grams: P protein, F fat, C carbs, Fiber (part of C, not on top of it). Milligrams: Zn, Fe, Mg, VitC.',
@@ -133,8 +156,9 @@ async function readLog(input) {
     `Logged:    ${t.cal} kcal | P ${t.p} | F ${t.f} | C ${t.c} | Fiber ${t.fb} | Zn ${t.zn} | Fe ${t.fe} | Mg ${t.mg} | VitC ${t.vc}`,
     `Remaining: ${r1(g.cal - t.cal)} kcal | P ${r1(g.p - t.p)} | F ${r1(g.f - t.f)} | C ${r1(g.c - t.c)} | Fiber ${r1(g.fb - t.fb)} | Zn ${r1(g.zn - t.zn)} | Fe ${r1(g.fe - t.fe)} | Mg ${r1(g.mg - t.mg)} | VitC ${r1(g.vc - t.vc)}`,
     'Items:',
-    lines
-  ].join('\n');
+    lines,
+    saved.length ? `Saved foods (log these with log_saved_food, not by estimating): ${saved.join('; ')}.` : ''
+  ].filter(Boolean).join('\n');
 }
 
 async function editFood(input) {
@@ -227,6 +251,188 @@ async function deleteFood(input) {
       `Deleted from ${where(state, sel.idx)}: ${gone.join(', ')}.` +
       (missing.length ? ` Not found: ${missing.join(', ')}.` : '') + ' ' + totalsLine(day) };
   });
+}
+
+/* ---------------------------------------------------------- saved foods -- */
+
+// What the user eats over and over, each kept with the numbers for one amount
+// of it. A fresh estimate every time is how the same Costco chicken came out at
+// 200 kcal one day and 280 the next; a saved one is the same arithmetic on the
+// same numbers, so it cannot drift.
+//
+// They live in the log beside the targets, so every device and every new chat
+// sees them. Protein goes through the complete-source rule when a food is
+// saved rather than when it is logged, so what list_saved_foods shows is
+// exactly what log_saved_food writes.
+
+// A log written before saved foods existed has no list at all.
+const foodsOf = state => (Array.isArray(state.foods) ? state.foods : (state.foods = []));
+const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+// Exact name first, ignoring case; then the one saved food whose name holds
+// what was asked or is held in it, so "chipotle chicken" finds "Kirkland
+// chargrilled chipotle chicken". Two candidates get a question, not a guess.
+function findFood(foods, asked) {
+  const q = norm(asked);
+  if (!q) return { why: 'A saved food was asked for without a name.' };
+  const exact = foods.find(f => norm(f.name) === q);
+  if (exact) return { food: exact, exact: true };
+  const near = foods.filter(f => norm(f.name).includes(q) || q.includes(norm(f.name)));
+  if (near.length === 1) return { food: near[0], exact: false };
+  if (near.length > 1) return { why: `"${asked}" could be ${near.map(f => `"${f.name}"`).join(' or ')}. Say which.` };
+  return { why: `No saved food is called "${asked}". Saved: ${foods.length ? foods.map(f => f.name).join('; ') : 'none yet'}.` };
+}
+
+const numbersLine = f => `${f.cal} kcal | P ${f.p} | F ${f.f} | C ${f.c} | Fiber ${f.fb} | Zn ${f.zn} | Fe ${f.fe} | Mg ${f.mg} | VitC ${f.vc}`;
+
+// The saved amount's numbers times k, with the rounding logFood() gives an
+// estimate.
+const scaled = (f, k) => ({
+  cal: clamp0(r0(f.cal * k)),
+  p: clamp0(r1(f.p * k)),
+  f: clamp0(r1(f.f * k)),
+  c: clamp0(r1(f.c * k)),
+  fb: clamp0(r1(f.fb * k)),
+  zn: clamp0(r1(f.zn * k)),
+  fe: clamp0(r1(f.fe * k)),
+  mg: clamp0(r0(f.mg * k)),
+  vc: clamp0(r1(f.vc * k))
+});
+
+async function saveFood(input) {
+  const it = input || {};
+  const name = String(it.name || '').trim().slice(0, 80);
+  if (!name) return 'No name was given, so nothing was saved.';
+  const g = clamp0(r1(it.grams));
+  const per = String(it.per || '').trim().slice(0, 60) || (g ? `${g} g` : '');
+  if (!per) return 'Nothing was saved. Say what amount the numbers are for in "per", e.g. "100 g" or "1 serving (85 g)".';
+
+  const food = Object.assign({ id: uid(), name, per, g }, nutrientsFrom(it, name), {
+    note: String(it.note || '').trim().slice(0, 120)
+  });
+  const zeroed = food.p === 0 && (Number(it.protein) || 0) > 0;
+
+  return await mutate(state => {
+    const foods = foodsOf(state);
+    const i = foods.findIndex(f => norm(f.name) === norm(name));
+    const was = i === -1 ? null : foods[i];
+    if (was) {
+      food.id = was.id;
+      // Same reason as in editFood(): a save that changed nothing must not be
+      // reported as one, and must not cost the laptop its undo history.
+      if (JSON.stringify(food) === JSON.stringify(was)) {
+        return { changed: false, text: `${was.name} is already saved with exactly those numbers. Nothing changed.` };
+      }
+      foods[i] = food;
+    } else {
+      foods.push(food);
+    }
+    state.foodsAt = Date.now();
+
+    return { changed: true, text: [
+      was ? `Replaced the saved numbers for ${food.name} (were per ${was.per}: ${numbersLine(was)}).` : `Saved ${food.name}.`,
+      `Now per ${food.per}: ${numbersLine(food)}.`,
+      zeroed ? 'Protein saved as 0 — protein_source was not "complete".' : '',
+      g ? 'It can be logged by grams or by servings.' : `It has no gram weight, so it can only be logged in servings of ${food.per}.`
+    ].filter(Boolean).join(' ') };
+  });
+}
+
+async function listSavedFoods() {
+  const state = await currentState();
+  const foods = state ? foodsOf(state) : [];
+  if (!foods.length) {
+    return 'No foods are saved yet. When the user reads numbers off a label, corrects an estimate, or logs something ' +
+           'they clearly eat often, offer to save it with save_food.';
+  }
+  return [
+    `${foods.length} saved food(s). log_saved_food writes exactly these numbers, scaled to the amount eaten.`,
+    ...foods.map(f => `- ${f.name}, per ${f.per}${f.g ? '' : ' (no gram weight — log in servings)'}: ${numbersLine(f)}${f.note ? ` (${f.note})` : ''}`)
+  ].join('\n');
+}
+
+async function logSavedFood(input) {
+  const raw = (input && input.items) || [];
+  if (!Array.isArray(raw) || !raw.length) return 'No items were provided, so nothing was logged.';
+
+  return await mutate(state => {
+    const sel = selectDay(state, input);
+    if (sel.why) return { changed: false, text: sel.why + ' Nothing was logged.' };
+    const day = state.days[sel.idx];
+    const foods = foodsOf(state);
+    const fallback = defaultMeal(state);
+
+    const added = [], problems = [];
+    for (const it of raw) {
+      const hit = findFood(foods, it.name);
+      if (hit.why) { problems.push(hit.why); continue; }
+      const f = hit.food;
+      const grams = Number(it.grams), servings = Number(it.servings);
+
+      let k, label;
+      if (grams > 0) {
+        if (!f.g) { problems.push(`${f.name} is saved per ${f.per} with no gram weight — send servings for it instead.`); continue; }
+        k = grams / f.g;
+        label = `${r1(grams)} g ${f.name}`;
+      } else if (servings > 0) {
+        k = servings;
+        label = f.g
+          ? `${r1(servings)} serving${servings === 1 ? '' : 's'} (${r0(servings * f.g)} g) ${f.name}`
+          : `${r1(servings)} × ${f.per} ${f.name}`;
+      } else {
+        problems.push(`Say how much ${f.name} was eaten, in grams or servings.`);
+        continue;
+      }
+
+      added.push(Object.assign({
+        id: uid(),
+        name: label.slice(0, 120),
+        meal: MEALS.includes(it.meal) ? it.meal : fallback
+      }, scaled(f, k)));
+    }
+
+    // All or nothing. Logging the ones that matched and refusing the rest
+    // invites a retry of the whole list, and that retry double-logs whatever
+    // went in the first time.
+    if (problems.length) return { changed: false, text: problems.join(' ') + ' Nothing was logged.' };
+
+    day.items.push(...added);
+    return { changed: true, text:
+      `Logged ${added.length} saved item(s) into ${where(state, sel.idx)}: ` +
+      `${added.map(a => `${a.name} (${a.meal}, ${a.cal} kcal, P ${a.p})`).join(', ')}. ${totalsLine(day)}` };
+  });
+}
+
+async function forgetFood(input) {
+  const asked = String((input && input.name) || '').trim();
+  if (!asked) return 'No name was given, so nothing was forgotten.';
+
+  return await mutate(state => {
+    const foods = foodsOf(state);
+    const hit = findFood(foods, asked);
+    if (hit.why) return { changed: false, text: hit.why + ' Nothing was forgotten.' };
+    // Near matches are fine for logging, where a wrong one shows up in the
+    // reply. A removal is gone before anyone reads it, so it takes the name.
+    if (!hit.exact) {
+      return { changed: false, text: `No saved food is called exactly "${asked}". Did you mean "${hit.food.name}"? Send that name to forget it. Nothing was forgotten.` };
+    }
+    foods.splice(foods.indexOf(hit.food), 1);
+    state.foodsAt = Date.now();
+    return { changed: true, text: `Forgot ${hit.food.name}. Anything already logged from it stays as it is.` };
+  });
+}
+
+// Appended to the connector's instructions, so a brand-new chat knows the
+// names before its first call. Names only: the numbers are read fresh through
+// list_saved_foods, and a database blip here must not stop Claude connecting.
+async function savedFoodsNote() {
+  try {
+    const state = await currentState();
+    const names = state ? foodsOf(state).map(f => f.name) : [];
+    return names.length ? ` Saved right now: ${names.join('; ')}.` : ' Nothing is saved yet.';
+  } catch {
+    return '';
+  }
 }
 
 /* ----------------------------------------------------------------- days -- */
@@ -361,6 +567,10 @@ const CALLS = {
   read_log: readLog,
   edit_food: editFood,
   delete_food: deleteFood,
+  save_food: saveFood,
+  list_saved_foods: listSavedFoods,
+  log_saved_food: logSavedFood,
+  forget_food: forgetFood,
   list_days: listDays,
   switch_day: switchDay,
   add_day: addDay,
@@ -368,4 +578,4 @@ const CALLS = {
   set_targets: setTargets
 };
 
-module.exports = { CALLS };
+module.exports = { CALLS, savedFoodsNote };

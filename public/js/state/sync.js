@@ -53,6 +53,10 @@ export function mergeState(mine, theirs) {
   // zone on the phone cannot drag stale targets along with it.
   const newer = (Number(theirs.targetsAt) || 0) > (Number(mine.targetsAt) || 0) ? theirs : mine;
   const newerTz = (Number(theirs.tzAt) || 0) > (Number(mine.tzAt) || 0) ? theirs : mine;
+  // Saved foods are only ever changed by the connector, on the server, so in
+  // practice the newer list is always theirs. Settled by stamp all the same, so
+  // a page that one day edits them needs nothing new here.
+  const newerFoods = (Number(theirs.foodsAt) || 0) > (Number(mine.foodsAt) || 0) ? theirs : mine;
 
   // Every field the log carries has to be named here. This rebuilds the state
   // object rather than spreading it, so anything left out is dropped on the
@@ -64,6 +68,8 @@ export function mergeState(mine, theirs) {
     targetsAt: newer.targetsAt || 0,
     tz: newerTz.tz || '',
     tzAt: newerTz.tzAt || 0,
+    foods: newerFoods.foods || [],
+    foodsAt: newerFoods.foodsAt || 0,
     days
   };
 }

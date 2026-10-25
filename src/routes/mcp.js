@@ -25,8 +25,8 @@ const crypto = require('crypto');
 const { json, readBody } = require('../http/respond');
 const { MAX_BODY_BYTES } = require('../config/limits');
 const { pick } = require('../config/env');
-const { TOOLS } = require('../mcp/schemas');
-const { CALLS } = require('../mcp/apply');
+const { TOOLS, INSTRUCTIONS } = require('../mcp/schemas');
+const { CALLS, savedFoodsNote } = require('../mcp/apply');
 
 // Claude stores a connector as a bare URL and cannot be told to send a custom
 // header, so the secret has to ride in the path: /mcp/<token>. That is a bearer
@@ -60,7 +60,8 @@ async function dispatch(msg) {
     return {
       protocolVersion: PROTOCOL_VERSIONS.includes(asked) ? asked : PROTOCOL_VERSIONS[0],
       capabilities: { tools: {} },
-      serverInfo: { name: 'macro-tracker', version: '1.1.0' }
+      serverInfo: { name: 'macro-tracker', version: '1.2.0' },
+      instructions: INSTRUCTIONS + await savedFoodsNote()
     };
   }
 

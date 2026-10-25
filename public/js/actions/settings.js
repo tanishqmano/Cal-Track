@@ -59,7 +59,7 @@ export async function saveApiKey() {
 }
 
 export async function resetAll() {
-  if (!confirm('Delete every logged day, on every device? Your targets and API key are kept.')) return;
+  if (!confirm('Delete every logged day, on every device? Your targets, saved foods and API key are kept.')) return;
   setState(freshState());
   // Rebinds TARGETS onto the new state object — without it, later target edits
   // would be written into the log that was just thrown away.

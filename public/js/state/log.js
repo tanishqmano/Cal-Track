@@ -21,16 +21,18 @@ export let TARGETS = Object.assign({}, DEFAULT_TARGETS);
 export const uid = () => Math.random().toString(36).slice(2, 10);
 export const newDay = n => ({ id: uid(), label: 'Day ' + n, items: [], chat: [] });
 
-// Targets and the timezone carry over a reset — they are settings, not logged
-// data. The *At stamps are only read when two devices disagree; see
-// mergeState(). They are kept apart so that setting the zone on the phone
-// cannot revert targets set on the laptop, and the other way round.
+// Targets, the timezone and the saved foods carry over a reset — they are
+// settings, not logged data. The *At stamps are only read when two devices
+// disagree; see mergeState(). They are kept apart so that setting the zone on
+// the phone cannot revert targets set on the laptop, and the other way round.
 export const freshState = () => ({
   v: 1, active: 0,
   targets: Object.assign({}, TARGETS),
   targetsAt: (state && state.targetsAt) || 0,
   tz: (state && state.tz) || '',
   tzAt: (state && state.tzAt) || 0,
+  foods: (state && state.foods) || [],
+  foodsAt: (state && state.foodsAt) || 0,
   days: [newDay(1)]
 });
 
@@ -71,6 +73,11 @@ export function normalizeState() {
   // needs a name here. A log written before this existed has neither field.
   if (typeof state.tz !== 'string') state.tz = '';
   if (typeof state.tzAt !== 'number') state.tzAt = 0;
+
+  // Saved foods are written by the Claude connector (src/mcp/apply.js); the
+  // page only has to carry them. A log from before they existed has none.
+  if (!Array.isArray(state.foods)) state.foods = [];
+  if (typeof state.foodsAt !== 'number') state.foodsAt = 0;
 
   for (const d of state.days) {
     if (!Array.isArray(d.items)) d.items = [];

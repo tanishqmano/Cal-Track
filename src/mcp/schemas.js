@@ -44,7 +44,8 @@ const LOG_FOOD = {
   name: 'log_food',
   description:
     'Write food into the tracker. Estimate the macros yourself from the photo or description first, ' +
-    'then send one entry per distinct item. Say what you logged and the running day total afterwards.',
+    'then send one entry per distinct item. Say what you logged and the running day total afterwards. ' +
+    'Anything the user has saved goes through log_saved_food instead, so it is never estimated twice.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -115,6 +116,86 @@ const DELETE_FOOD = {
   }
 };
 
+/* ---------------------------------------------------------- saved foods -- */
+
+// The nutrient fields alone. A saved food's name and amount mean something
+// different from a logged item's, so save_food describes those itself.
+const NUTRIENTS = Object.assign({}, ITEM_FIELDS);
+delete NUTRIENTS.name;
+delete NUTRIENTS.meal;
+
+const SAVE_FOOD = {
+  name: 'save_food',
+  description:
+    'Remember a food the user eats often, with the numbers for one amount of it, so it can be logged later with ' +
+    'log_saved_food instead of being estimated again. Best taken from the package label. Offer this when the user ' +
+    'reads numbers off a label, corrects an estimate, or logs the same thing again. Saving a name that is already ' +
+    'saved replaces its numbers.',
+  inputSchema: {
+    type: 'object',
+    properties: Object.assign({
+      name: { type: 'string', description: 'What the user calls it, with no quantity, e.g. "Kirkland chargrilled chipotle chicken", "2% milk", "oats".' },
+      per: { type: 'string', description: 'The amount the numbers are for, e.g. "100 g", "1 serving (85 g)", "1 cup (240 ml)". Use the label\'s serving when there is one.' },
+      grams: { type: 'number', description: 'What that amount weighs in grams — for a drink, its ml. This is what lets it be logged by weight; leave it out only when there is no weight to give, like "1 bar".' },
+      note: { type: 'string', description: 'Optional. Where the numbers came from, e.g. "from the label".' }
+    }, NUTRIENTS),
+    required: ['name', 'per', 'calories', 'protein', 'fat', 'carbs', 'fiber', 'protein_source', 'zinc', 'iron', 'magnesium', 'vitamin_c']
+  }
+};
+
+const LIST_SAVED_FOODS = {
+  name: 'list_saved_foods',
+  description:
+    'List the foods the user has saved, with the numbers for each. Check here before estimating anything the user ' +
+    'names: if it is saved, log it with log_saved_food.',
+  inputSchema: { type: 'object', properties: {} }
+};
+
+const LOG_SAVED_FOOD = {
+  name: 'log_saved_food',
+  description:
+    'Log saved foods by name and amount. The numbers come from the saved entry, scaled to the amount, so the same ' +
+    'food comes out the same every time — use this rather than log_food for anything list_saved_foods shows. ' +
+    'Items that are not saved still go through log_food, in the same turn. All or nothing: one unknown name or ' +
+    'missing amount logs none of them. Say what you logged and the running day total afterwards.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      items: {
+        type: 'array',
+        description: 'One entry per saved food eaten.',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'The saved name as list_saved_foods shows it. A distinctive part of it is enough.' },
+            grams: { type: 'number', description: 'How much was eaten, in grams — for a drink, ml. Send this or servings.' },
+            servings: { type: 'number', description: 'How many of the saved amount, e.g. 2 for two of "1 serving (85 g)". Send this or grams.' },
+            meal: ITEM_FIELDS.meal
+          },
+          required: ['name', 'meal']
+        }
+      },
+      label: DAY_PICKER.label,
+      position: DAY_PICKER.position
+    },
+    required: ['items']
+  }
+};
+
+const FORGET_FOOD = {
+  name: 'forget_food',
+  description:
+    'Remove a food from the saved list, by its exact saved name. Only when the user asks for it to be forgotten — ' +
+    'to change its numbers, call save_food again instead. Items already logged from it are left alone.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      name: { type: 'string', description: 'The exact saved name, as list_saved_foods shows it.' }
+    },
+    required: ['name']
+  }
+};
+
 /* ----------------------------------------------------------------- days -- */
 
 const LIST_DAYS = {
@@ -182,6 +263,20 @@ const SET_TARGETS = {
   }
 };
 
-const TOOLS = [LOG_FOOD, READ_LOG, EDIT_FOOD, DELETE_FOOD, LIST_DAYS, SWITCH_DAY, ADD_DAY, DELETE_DAY, SET_TARGETS];
+const TOOLS = [
+  LOG_FOOD, READ_LOG, EDIT_FOOD, DELETE_FOOD,
+  SAVE_FOOD, LIST_SAVED_FOODS, LOG_SAVED_FOOD, FORGET_FOOD,
+  LIST_DAYS, SWITCH_DAY, ADD_DAY, DELETE_DAY, SET_TARGETS
+];
 
-module.exports = { TOOLS };
+// Sent once, when Claude connects. A tool description is only read once that
+// tool is already being considered, so on its own nothing would make a new chat
+// think of the saved list before estimating; this does. src/routes/mcp.js adds
+// the saved names at connect time.
+const INSTRUCTIONS =
+  'This is one person\'s food log, shared with their phone and laptop. They keep a list of saved foods: things ' +
+  'they eat often, with numbers they have confirmed. Before estimating any food they mention, check it against that ' +
+  'list. If it is there, log it with log_saved_food and do not estimate it, so it comes out the same every time. ' +
+  'When they read numbers off a label, correct an estimate, or log the same food again, offer to save it with save_food.';
+
+module.exports = { TOOLS, INSTRUCTIONS };
