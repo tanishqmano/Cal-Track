@@ -45,7 +45,9 @@ const LOG_FOOD = {
   description:
     'Write food into the tracker. Estimate the macros yourself from the photo or description first, ' +
     'then send one entry per distinct item. Say what you logged and the running day total afterwards. ' +
-    'Anything the user has saved goes through log_saved_food instead, so it is never estimated twice.',
+    'Saved foods are never estimated: they go through log_saved_food, and this tool turns them back. ' +
+    'When the user gives you a food\'s numbers themselves — off a label, or correcting your estimate — also ' +
+    'save it with save_food straight away, without asking, so they never have to say them again.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -54,7 +56,9 @@ const LOG_FOOD = {
         description: 'One entry per distinct food item.',
         items: {
           type: 'object',
-          properties: ITEM_FIELDS,
+          properties: Object.assign({}, ITEM_FIELDS, {
+            different_food: { type: 'boolean', description: 'Only true when this is not the user\'s saved food of a similar name — say, a different brand. Leave out otherwise.' }
+          }),
           required: ['name', 'calories', 'protein', 'fat', 'carbs', 'fiber', 'protein_source', 'zinc', 'iron', 'magnesium', 'vitamin_c', 'meal']
         }
       },
@@ -79,7 +83,8 @@ const EDIT_FOOD = {
   description:
     'Correct an item that is already logged — a wrong quantity, the wrong meal, a bad estimate. ' +
     'Send only the fields that change; everything else is left alone. ' +
-    'Call read_log first to get the ids.',
+    'Call read_log first to get the ids. When the correction is the user\'s own numbers for a food, ' +
+    'save it with save_food too, without asking, so the next chat gets it right first time.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -127,10 +132,10 @@ delete NUTRIENTS.meal;
 const SAVE_FOOD = {
   name: 'save_food',
   description:
-    'Remember a food the user eats often, with the numbers for one amount of it, so it can be logged later with ' +
-    'log_saved_food instead of being estimated again. Best taken from the package label. Offer this when the user ' +
-    'reads numbers off a label, corrects an estimate, or logs the same thing again. Saving a name that is already ' +
-    'saved replaces its numbers.',
+    'Remember a food with the numbers for one amount of it, so every later chat logs it with log_saved_food ' +
+    'instead of estimating. Call this without asking whenever the user gives you a food\'s numbers themselves — ' +
+    'read off a label, typed out, or correcting your estimate — and tell them it is saved. Saving a name that is ' +
+    'already saved replaces its numbers, which is how a correction sticks.',
   inputSchema: {
     type: 'object',
     properties: Object.assign({
@@ -271,12 +276,28 @@ const TOOLS = [
 
 // Sent once, when Claude connects. A tool description is only read once that
 // tool is already being considered, so on its own nothing would make a new chat
-// think of the saved list before estimating; this does. src/routes/mcp.js adds
-// the saved names at connect time.
+// think of the saved list before estimating; this does.
 const INSTRUCTIONS =
-  'This is one person\'s food log, shared with their phone and laptop. They keep a list of saved foods: things ' +
-  'they eat often, with numbers they have confirmed. Before estimating any food they mention, check it against that ' +
-  'list. If it is there, log it with log_saved_food and do not estimate it, so it comes out the same every time. ' +
-  'When they read numbers off a label, correct an estimate, or log the same food again, offer to save it with save_food.';
+  'This is one person\'s food log, shared with their phone and laptop. It remembers foods for them so they never ' +
+  'have to repeat themselves. Whenever they tell you a food\'s numbers — off a label, typed out, or correcting your ' +
+  'estimate — save it with save_food right away, without asking, and say it is saved. Before estimating any food ' +
+  'they mention, check the saved list: if it is there, log it with log_saved_food, never by estimating.';
 
-module.exports = { TOOLS, INSTRUCTIONS };
+// The saved names, added at the moment they are asked for. Not every app
+// passes the instructions on to the model, but a tool description always
+// reaches it, so the names ride on the two logging tools as well. Null means
+// the log could not be read, which is said as nothing rather than "none".
+const savedLine = names => !names ? '' : names.length
+  ? ` Saved right now: ${names.join('; ')}.`
+  : ' Nothing is saved yet.';
+
+const instructionsFor = names => INSTRUCTIONS + savedLine(names);
+
+function toolsFor(names) {
+  const line = savedLine(names);
+  return TOOLS.map(t => (t === LOG_FOOD || t === LOG_SAVED_FOOD)
+    ? Object.assign({}, t, { description: t.description + line })
+    : t);
+}
+
+module.exports = { TOOLS, toolsFor, instructionsFor };

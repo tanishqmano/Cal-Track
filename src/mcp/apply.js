@@ -102,25 +102,34 @@ async function logFood(input) {
     if (sel.why) return { changed: false, text: sel.why + ' Nothing was logged.' };
     const day = state.days[sel.idx];
 
+    // A saved food sent here would be estimated all over again, which is the
+    // drift saving it was meant to end, so it is turned back rather than
+    // logged and flagged: a flag only works if it is acted on, and a log that
+    // needs a delete afterwards can end up with both. The whole call goes back,
+    // for the same reason log_saved_food is all or nothing. different_food is
+    // the way past for a food that only shares a name with a saved one.
+    const foods = foodsOf(state);
+    const clash = [];
+    added.forEach((a, i) => {
+      if (raw[i].different_food === true) return;
+      const f = foods.find(s => norm(a.name).includes(norm(s.name)));
+      if (f) clash.push(`${a.name} (saved as "${f.name}")`);
+    });
+    if (clash.length) {
+      return { changed: false, text:
+        `Nothing was logged. These are saved foods, so they go through log_saved_food with grams or servings instead of an estimate: ${clash.join('; ')}. ` +
+        'Send the other items through log_food again. If one really is a different food that only shares a name, resend it with different_food: true.' };
+    }
+
     const fallback = defaultMeal(state);
     for (const it of added) {
       if (!it.meal) it.meal = fallback;
       day.items.push(it);
     }
 
-    // A saved food estimated anyway is the exact drift saving it was meant to
-    // stop, so it is pointed out. Not fixed, though: a label photo of a
-    // different product can share a name, and only the conversation knows.
-    const foods = foodsOf(state);
-    const missed = added.filter(a => foods.some(f => norm(a.name).includes(norm(f.name))));
-
     return { changed: true, text: [
       `Logged ${added.length} item(s) into ${where(state, sel.idx)}: ${added.map(a => `${a.name} (${a.meal})`).join(', ')}.`,
       zeroed.length ? `Protein set to 0 for: ${zeroed.join(', ')} (not complete sources).` : '',
-      missed.length
-        ? `These were estimated, but the user has saved numbers for them: ${missed.map(a => `[${a.id}] ${a.name}`).join(', ')}. ` +
-          'Unless the estimate was deliberate, delete_food those ids and log them with log_saved_food.'
-        : '',
       totalsLine(day)
     ].filter(Boolean).join(' ') };
   });
@@ -333,7 +342,8 @@ async function saveFood(input) {
       was ? `Replaced the saved numbers for ${food.name} (were per ${was.per}: ${numbersLine(was)}).` : `Saved ${food.name}.`,
       `Now per ${food.per}: ${numbersLine(food)}.`,
       zeroed ? 'Protein saved as 0 — protein_source was not "complete".' : '',
-      g ? 'It can be logged by grams or by servings.' : `It has no gram weight, so it can only be logged in servings of ${food.per}.`
+      g ? 'It can be logged by grams or by servings.' : `It has no gram weight, so it can only be logged in servings of ${food.per}.`,
+      'Tell the user it is saved. Every chat from now on logs it with log_saved_food.'
     ].filter(Boolean).join(' ') };
   });
 }
@@ -342,8 +352,8 @@ async function listSavedFoods() {
   const state = await currentState();
   const foods = state ? foodsOf(state) : [];
   if (!foods.length) {
-    return 'No foods are saved yet. When the user reads numbers off a label, corrects an estimate, or logs something ' +
-           'they clearly eat often, offer to save it with save_food.';
+    return 'No foods are saved yet. Whenever the user gives a food\'s numbers themselves — off a label, or correcting ' +
+           'an estimate — save it with save_food without asking.';
   }
   return [
     `${foods.length} saved food(s). log_saved_food writes exactly these numbers, scaled to the amount eaten.`,
@@ -422,16 +432,16 @@ async function forgetFood(input) {
   });
 }
 
-// Appended to the connector's instructions, so a brand-new chat knows the
-// names before its first call. Names only: the numbers are read fresh through
-// list_saved_foods, and a database blip here must not stop Claude connecting.
-async function savedFoodsNote() {
+// For the connector's instructions and tool descriptions, so a brand-new chat
+// knows the names before its first call. Names only: the numbers are read
+// fresh through list_saved_foods. Null when the log could not be read — that
+// must not stop Claude connecting, and must not be reported as "none saved".
+async function savedFoodNames() {
   try {
     const state = await currentState();
-    const names = state ? foodsOf(state).map(f => f.name) : [];
-    return names.length ? ` Saved right now: ${names.join('; ')}.` : ' Nothing is saved yet.';
+    return state ? foodsOf(state).map(f => f.name) : [];
   } catch {
-    return '';
+    return null;
   }
 }
 
@@ -578,4 +588,4 @@ const CALLS = {
   set_targets: setTargets
 };
 
-module.exports = { CALLS, savedFoodsNote };
+module.exports = { CALLS, savedFoodNames };
